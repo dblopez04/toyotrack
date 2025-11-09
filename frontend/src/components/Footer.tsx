@@ -20,13 +20,11 @@ export function Footer({ onNavigate }: FooterProps) {
             <h4 className="mb-4">Legal</h4>
             <div className="flex flex-col gap-2">
               <button
-                onClick={() => onNavigate('privacy')}
                 className="text-gray-400 hover:text-white text-left"
               >
                 Privacy Policy
               </button>
               <button
-                onClick={() => onNavigate('terms')}
                 className="text-gray-400 hover:text-white text-left"
               >
                 Terms & Conditions

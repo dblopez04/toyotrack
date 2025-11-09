@@ -9,8 +9,9 @@ import { ChatFinance } from './components/ChatFinance';
 import { Profile } from './components/Profile';
 import { About } from './components/About';
 import { Contact } from './components/Contact';
-import { Privacy } from './components/Privacy';
-import { Terms } from './components/Terms';
+import { CarDetails } from './components/CarDetails';
+import { Compare } from './components/Compare';
+import { cars } from './data/cars';
 
 type Page =
   | 'landing'
@@ -21,13 +22,18 @@ type Page =
   | 'profile'
   | 'about'
   | 'contact'
-  | 'privacy'
-  | 'terms';
+  | 'car-details'
+  | 'compare';
 
 interface User {
   username: string;
   email: string;
   password: string;
+  creditTier: 'excellent' | 'good' | 'fair' | 'poor';
+  budget: number;
+  preferredCarType: string;
+  fuelType: 'electric' | 'hybrid' | 'gas';
+  maxDownPayment: number;
 }
 
 export default function App() {
@@ -35,6 +41,8 @@ export default function App() {
   const [currentUser, setCurrentUser] = useState<User | null>(null);
   const [users, setUsers] = useState<User[]>([]);
   const [savedCars, setSavedCars] = useState<string[]>([]);
+  const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
+  const [compareCarIds, setCompareCarIds] = useState<[string, string] | null>(null);
 
   // Load data from localStorage on mount
   useEffect(() => {
@@ -43,10 +51,30 @@ export default function App() {
     const storedSavedCars = localStorage.getItem('toyotrack_saved_cars');
 
     if (storedUsers) {
-      setUsers(JSON.parse(storedUsers));
+      const parsedUsers = JSON.parse(storedUsers);
+      // Migrate old users to include new onboarding fields
+      const migratedUsers = parsedUsers.map((user: any) => ({
+        ...user,
+        creditTier: user.creditTier || 'good',
+        budget: user.budget || 50000,
+        preferredCarType: user.preferredCarType || 'sedan',
+        fuelType: user.fuelType || 'gas',
+        maxDownPayment: user.maxDownPayment || 10000,
+      }));
+      setUsers(migratedUsers);
     }
     if (storedUser) {
-      setCurrentUser(JSON.parse(storedUser));
+      const parsedUser = JSON.parse(storedUser);
+      // Migrate current user to include new onboarding fields
+      const migratedUser = {
+        ...parsedUser,
+        creditTier: parsedUser.creditTier || 'good',
+        budget: parsedUser.budget || 50000,
+        preferredCarType: parsedUser.preferredCarType || 'sedan',
+        fuelType: parsedUser.fuelType || 'gas',
+        maxDownPayment: parsedUser.maxDownPayment || 10000,
+      };
+      setCurrentUser(migratedUser);
       setCurrentPage('finance');
     }
     if (storedSavedCars) {
@@ -73,14 +101,32 @@ export default function App() {
     localStorage.setItem('toyotrack_saved_cars', JSON.stringify(savedCars));
   }, [savedCars]);
 
-  const handleSignUp = (username: string, email: string, password: string) => {
+  const handleSignUp = (
+    username: string, 
+    email: string, 
+    password: string,
+    creditTier: 'excellent' | 'good' | 'fair' | 'poor',
+    budget: number,
+    preferredCarType: string,
+    fuelType: 'electric' | 'hybrid' | 'gas',
+    maxDownPayment: number
+  ) => {
     const existingUser = users.find((u) => u.email === email);
     if (existingUser) {
       alert('Email already exists!');
       return;
     }
 
-    const newUser = { username, email, password };
+    const newUser = { 
+      username, 
+      email, 
+      password, 
+      creditTier, 
+      budget, 
+      preferredCarType, 
+      fuelType, 
+      maxDownPayment 
+    };
     setUsers([...users, newUser]);
     setCurrentUser(newUser);
     setCurrentPage('finance');
@@ -116,10 +162,51 @@ export default function App() {
     );
   };
 
+  const handleViewCarDetails = (carId: string) => {
+    setSelectedCarId(carId);
+    setCurrentPage('car-details');
+  };
+
+  const handleBackToFinance = () => {
+    setSelectedCarId(null);
+    setCurrentPage('finance');
+  };
+
+  const handleCompare = (carIds: [string, string]) => {
+    setCompareCarIds(carIds);
+    setCurrentPage('compare');
+  };
+
+  const handleBackFromCompare = () => {
+    setCompareCarIds(null);
+    setCurrentPage('finance');
+  };
+
   const handleUpdatePassword = (newPassword: string) => {
     if (!currentUser) return;
 
     const updatedUser = { ...currentUser, password: newPassword };
+    setCurrentUser(updatedUser);
+    setUsers(users.map((u) => (u.email === currentUser.email ? updatedUser : u)));
+  };
+
+  const handleUpdatePreferences = (
+    creditTier: 'excellent' | 'good' | 'fair' | 'poor',
+    budget: number,
+    preferredCarType: string,
+    fuelType: 'electric' | 'hybrid' | 'gas',
+    maxDownPayment: number
+  ) => {
+    if (!currentUser) return;
+
+    const updatedUser = { 
+      ...currentUser, 
+      creditTier, 
+      budget, 
+      preferredCarType, 
+      fuelType, 
+      maxDownPayment 
+    };
     setCurrentUser(updatedUser);
     setUsers(users.map((u) => (u.email === currentUser.email ? updatedUser : u)));
   };
@@ -134,7 +221,12 @@ export default function App() {
         return <SignUp onSignUp={handleSignUp} onNavigate={handleNavigate} />;
       case 'finance':
         return (
-          <FinanceCar savedCars={savedCars} onToggleSave={handleToggleSave} />
+          <FinanceCar 
+            savedCars={savedCars} 
+            onToggleSave={handleToggleSave}
+            onViewDetails={handleViewCarDetails}
+            onCompare={handleCompare}
+          />
         );
       case 'chat':
         return <ChatFinance />;
@@ -145,16 +237,43 @@ export default function App() {
             savedCars={savedCars}
             onToggleSave={handleToggleSave}
             onUpdatePassword={handleUpdatePassword}
+            onUpdatePreferences={handleUpdatePreferences}
+            onViewDetails={handleViewCarDetails}
           />
         ) : null;
+      case 'car-details':
+        const selectedCar = cars.find((car) => car.id === selectedCarId);
+        return selectedCar ? (
+          <CarDetails
+            car={selectedCar}
+            isSaved={savedCars.includes(selectedCar.id)}
+            onToggleSave={handleToggleSave}
+            onBack={handleBackToFinance}
+          />
+        ) : null;
+      case 'compare':
+        if (compareCarIds) {
+          const compareCars = compareCarIds
+            .map((id) => cars.find((car) => car.id === id))
+            .filter((car): car is typeof cars[0] => car !== undefined);
+          
+          if (compareCars.length === 2) {
+            return (
+              <Compare 
+                cars={compareCars as [typeof cars[0], typeof cars[0]]}
+                savedCars={savedCars}
+                onToggleSave={handleToggleSave}
+                onBack={handleBackFromCompare}
+                onViewDetails={handleViewCarDetails}
+              />
+            );
+          }
+        }
+        return null;
       case 'about':
         return <About />;
       case 'contact':
         return <Contact />;
-      case 'privacy':
-        return <Privacy />;
-      case 'terms':
-        return <Terms />;
       default:
         return <LandingPage onNavigate={handleNavigate} />;
     }
