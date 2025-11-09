@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Menu, User, Settings, Car, MessageSquare, UserCircle, Info, Mail, LogOut } from 'lucide-react';
+import { Menu, User, Settings, Car, MessageSquare, UserCircle, LogOut } from 'lucide-react';
 import { Button } from './ui/button';
 import {
   DropdownMenu,
@@ -119,23 +119,6 @@ export function Header({ currentUser, onNavigate, onLogout }: HeaderProps) {
             >
               <UserCircle className="h-5 w-5" />
               Profile
-            </Button>
-            <Separator className="my-2" />
-            <Button
-              variant="ghost"
-              className="justify-start gap-3 h-12"
-              onClick={() => handleNavigate('about')}
-            >
-              <Info className="h-5 w-5" />
-              About
-            </Button>
-            <Button
-              variant="ghost"
-              className="justify-start gap-3 h-12"
-              onClick={() => handleNavigate('contact')}
-            >
-              <Mail className="h-5 w-5" />
-              Contact
             </Button>
             <Separator className="my-2" />
             <Button

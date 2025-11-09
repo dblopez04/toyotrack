@@ -7,8 +7,6 @@ import { SignUp } from './components/SignUp';
 import { FinanceCar } from './components/FinanceCar';
 import { ChatFinance } from './components/ChatFinance';
 import { Profile } from './components/Profile';
-import { About } from './components/About';
-import { Contact } from './components/Contact';
 import { CarDetails } from './components/CarDetails';
 import { Compare } from './components/Compare';
 import { cars } from './data/cars';
@@ -270,10 +268,6 @@ export default function App() {
           }
         }
         return null;
-      case 'about':
-        return <About />;
-      case 'contact':
-        return <Contact />;
       default:
         return <LandingPage onNavigate={handleNavigate} />;
     }
