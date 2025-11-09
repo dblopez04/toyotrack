@@ -8,7 +8,7 @@ const Vehicle = db.Vehicle;
 exports.getProfile = async (req, res) => {
     try {
         const user = await User.findOne({
-            where: { id: req.body.id }
+            where: { id: req.id }
         });
 
         if (!user){
@@ -19,7 +19,7 @@ exports.getProfile = async (req, res) => {
             user: {
                 email: user.email,
                 refreshToken: user.refreshToken
-            } 
+            }
         });
     } catch (err) {
         res.status(500).send({ message: err.message });
@@ -29,21 +29,21 @@ exports.getProfile = async (req, res) => {
 exports.setEmail = async (req, res) => {
     try {
         const user = await User.findOne({
-            where: { id: req.body.id }
+            where: { id: req.id }
         });
-        
+
         if (!user) {
             return res.status(404).send({ message: "User not found" });
         }
-        
+
         const email = req.body.email;
-        
+
         if (!email) {
             return res.status(400).send({ message: "Email is required" });
         }
 
         await user.update({ email });
-        
+
         res.send({ message: "Email updated successfully", email });
     } catch (err) {
         res.status(500).send({ message: err.message });
@@ -53,12 +53,12 @@ exports.setEmail = async (req, res) => {
 
 exports.setUserPreferences = async (req, res) => {
     try {
-        const { budget, carType, purchaseType } = req.body;
+        const { budget, carType, fuelType, purchaseType } = req.body;
         const userId = req.id;
 
         const [preferences, created] = await UserPreferences.findOrCreate({
             where: { userId },
-            defaults: { budget, carType, purchaseType }
+            defaults: { budget, carType, fuelType }
         });
 
         if (!created) {
@@ -74,7 +74,7 @@ exports.setUserPreferences = async (req, res) => {
 exports.getUserPreferences = async (req, res) => {
     try {
         const userPreferences = await UserPreferences.findOne({
-            where: { userId: req.body.id }
+            where: { userId: req.id }
         });
 
         if (!userPreferences){
@@ -86,7 +86,7 @@ exports.getUserPreferences = async (req, res) => {
                 userId: userPreferences.userId,
                 budget: userPreferences.budget,
                 carType: userPreferences.carType,
-                purchaseType: userPreferences.purchaseType
+                fuelType: userPreferences.fuelType
             }
         });
     } catch (err) {
@@ -136,7 +136,7 @@ exports.getUserFinances = async (req, res) => {
 
 exports.addBookmark = async (req, res) => {
     try {
-        const userId = req.body.userId;
+        const userId = req.id;
         const vehicleId = req.params.vehicleId;
 
         const [bookmark, created] = await UserBookmark.findOrCreate({
@@ -169,7 +169,7 @@ exports.addBookmark = async (req, res) => {
 
 exports.removeBookmark = async (req, res) => {
     try {
-        const userId = req.body.userId;
+        const userId = req.id;
         const vehicleId = req.params.vehicleId;
 
         const deleted = await UserBookmark.destroy({
@@ -191,7 +191,7 @@ exports.removeBookmark = async (req, res) => {
 
 exports.completeOnboarding = async (req, res) => {
     try {
-        const userId = req.body.userId;
+        const userId = req.id;
         await User.update(
             { completedOnboarding: true },
             { where: { id: userId } }

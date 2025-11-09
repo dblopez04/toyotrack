@@ -2,7 +2,7 @@ module.exports = (sequelize, DataTypes) => {
   const UserPreferences = sequelize.define("UserPreferences", {
     budget: DataTypes.FLOAT,
     carType: DataTypes.STRING,
-    purchaseType: DataTypes.STRING
+    fuelType: DataTypes.STRING,
   });
 
   UserPreferences.associate = (models) => {
