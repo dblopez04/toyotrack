@@ -18,8 +18,11 @@ exports.getAllVehicles = async (req, res) => {
     }
 
     if (req.query.electric === 'true') where.electric = true;
+    if (req.query.electric === 'false') where.electric = false;
     if (req.query.truck === 'true') where.truck = true;
+    if (req.query.truck === 'false') where.truck = false;
     if (req.query.pluginElectric === 'true') where.pluginElectric = true;
+    if (req.query.pluginElectric === 'false') where.pluginElectric = false;
 
     if (req.query.search) {
       where.model = { [Op.iLike]: `%${req.query.search}%` };
@@ -75,7 +78,7 @@ exports.getVehicleDetails = async (req, res) => {
 exports.getExteriorColorByID = async (req, res) => {
     try {
         const exteriorColors = await ExteriorColor.findOne({
-            where: { vehicleId: req.params.vehicleId }
+            where: { vehicleId: req.params.id }
         });
 
         res.json(exteriorColors);
@@ -88,7 +91,7 @@ exports.getExteriorColorByID = async (req, res) => {
 exports.getInteriorColorByID = async (req, res) => {
     try {
         const interiorColors = await InteriorColor.findOne({
-            where: { vehicleId: req.params.vehicleId }
+            where: { vehicleId: req.params.id }
         });
 
         res.json(interiorColors);
@@ -100,12 +103,14 @@ exports.getInteriorColorByID = async (req, res) => {
 
 exports.getFeaturesByID = async (req, res) => {
     try {
-        const features = await ExtraFeature.findAll({
-            where: { 
-                vehicleId: req.params.vehicleId,
-                category: req.params.category
-            }
-        });
+        const where = { vehicleId: req.params.id };
+
+        // Optional category filter from query params
+        if (req.query.category) {
+            where.category = req.query.category;
+        }
+
+        const features = await ExtraFeature.findAll({ where });
         res.json(features);
     } catch (err) {
         console.error(err);
@@ -116,7 +121,7 @@ exports.getFeaturesByID = async (req, res) => {
 exports.getCategoriesByID = async (req, res) => {
     try {
         const categories = await ExtraFeature.findAll({
-            where: { vehicleId: req.params.vehicleId },
+            where: { vehicleId: req.params.id },
             attributes: ['category'],
             group: ['category'],
             raw: true
@@ -136,9 +141,9 @@ exports.getCategoriesByID = async (req, res) => {
 exports.getImagesByID = async (req, res) => {
     try {
         const images = await CarImage.findAll({
-            where: { vehicleId: req.params.vehicleId }
+            where: { vehicleId: req.params.id }
         });
-        res.json({images});
+        res.json({ images });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
@@ -148,8 +153,9 @@ exports.getImagesByID = async (req, res) => {
 exports.getFirstImageByID = async (req, res) => {
     try {
         const image = await CarImage.findOne({
-            where: { vehicleId: req.params.vehicleId }
+            where: { vehicleId: req.params.id }
         });
+        res.json({ image });
     } catch (err) {
         console.error(err);
         res.status(500).json({ error: err.message });
@@ -158,22 +164,24 @@ exports.getFirstImageByID = async (req, res) => {
 
 exports.compareTwoVehiclesByID = async (req, res) => {
     try {
+        const { id1, id2 } = req.body;
+
         const vehicle1 = await Vehicle.findOne({
-            where: { id: req.params.id1 },
+            where: { id: id1 },
             include: [
                     { model: InteriorColor, as: 'InteriorColors' },
                     { model: ExteriorColor, as: 'ExteriorColors' },
-                    { model: ExtraFeature, as: 'ExtraFeatures' },  
-                    { model: CarImage, as: 'CarImages' },              
+                    { model: ExtraFeature, as: 'ExtraFeatures' },
+                    { model: CarImage, as: 'CarImages' },
                 ]
         });
         const vehicle2 = await Vehicle.findOne({
-            where: { id: req.params.id2 },
+            where: { id: id2 },
             include: [
                     { model: InteriorColor, as: 'InteriorColors' },
                     { model: ExteriorColor, as: 'ExteriorColors' },
-                    { model: ExtraFeature, as: 'ExtraFeatures' },  
-                    { model: CarImage, as: 'CarImages' }, 
+                    { model: ExtraFeature, as: 'ExtraFeatures' },
+                    { model: CarImage, as: 'CarImages' },
             ]
         });
 
@@ -203,3 +211,4 @@ exports.compareTwoVehiclesByID = async (req, res) => {
         res.status(500).json({ error: err.message });
     }
 }
+
