@@ -7,8 +7,15 @@ const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./app/config/swagger');
 
 // Enable CORS for frontend
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://localhost:3000',
+  'http://localhost:5174',
+  process.env.FRONTEND_URL // For production
+].filter(Boolean); // Remove undefined values
+
 app.use(cors({
-  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'], // Common Vite/React dev ports
+  origin: allowedOrigins,
   credentials: true, // Allow cookies
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization']
@@ -40,15 +47,19 @@ app.get("/", (req, res) => {
     })
 });
 
+const PORT = process.env.PORT || 4000;
+
 db.sequelize.authenticate()
     .then(() => {
         console.log('Database connection established successfully.');
-        return db.sequelize.sync({ force: true });
+        // Only force sync in development, not production
+        const syncOptions = process.env.NODE_ENV === 'production' ? {} : { force: true };
+        return db.sequelize.sync(syncOptions);
     })
     .then(() => {
         console.log('Database tables synchronized.');
-        app.listen(4000, () => {
-            console.log(`server is running on port 4000.`);
+        app.listen(PORT, () => {
+            console.log(`server is running on port ${PORT}.`);
         });
     })
     .catch(err => {
