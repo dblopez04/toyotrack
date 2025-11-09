@@ -1,9 +1,18 @@
 const express = require("express");
 const app = express();
+const cors = require("cors");
 const cookieParser = require("cookie-parser");
 const db = require("./app/models/index");
 const swaggerUi = require('swagger-ui-express');
 const swaggerSpec = require('./app/config/swagger');
+
+// Enable CORS for frontend
+app.use(cors({
+  origin: ['http://localhost:5173', 'http://localhost:3000', 'http://localhost:5174'], // Common Vite/React dev ports
+  credentials: true, // Allow cookies
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  allowedHeaders: ['Content-Type', 'Authorization']
+}));
 
 app.use(express.json());
 app.use(express.urlencoded({ extended:true }));

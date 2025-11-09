@@ -3,19 +3,34 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
+import { useAuth } from '../hooks/useAuth';
+import { getErrorMessage } from '../services/api';
 
 interface LoginProps {
-  onLogin: (email: string, password: string) => void;
+  onLogin: (email: string) => void;
   onNavigate: (page: string) => void;
 }
 
 export function Login({ onLogin, onNavigate }: LoginProps) {
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    onLogin(email, password);
+    setError(null);
+    setIsLoading(true);
+
+    try {
+      await login(email, password);
+      onLogin(email);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -27,6 +42,12 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 text-sm">
+                {error}
+              </div>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input
@@ -35,6 +56,7 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
                 placeholder="your.email@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -47,6 +69,7 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                disabled={isLoading}
                 required
               />
             </div>
@@ -54,8 +77,9 @@ export function Login({ onLogin, onNavigate }: LoginProps) {
             <Button
               type="submit"
               className="w-full bg-[#eb0a1e] hover:bg-[#c4091a]"
+              disabled={isLoading}
             >
-              Log In
+              {isLoading ? 'Logging in...' : 'Log In'}
             </Button>
 
             <div className="text-center">

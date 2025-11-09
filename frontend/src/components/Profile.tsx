@@ -1,69 +1,209 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
-import { cars } from '../data/cars';
 import { CarCard } from './CarCard';
+import authService from '../services/auth';
+import userService from '../services/user';
+import vehicleService from '../services/vehicle';
+import { getErrorMessage } from '../services/api';
+import { Vehicle } from '../types/api';
+import { Car } from '../data/cars';
 
 interface ProfileProps {
-  user: {
-    username: string;
-    email: string;
-    creditTier: 'excellent' | 'good' | 'fair' | 'poor';
-    budget: number;
-    preferredCarType: string;
-    fuelType: 'electric' | 'hybrid' | 'gas';
-    maxDownPayment: number;
-  };
   savedCars: string[];
   onToggleSave: (carId: string) => void;
-  onUpdatePassword: (newPassword: string) => void;
-  onUpdatePreferences?: (
-    creditTier: 'excellent' | 'good' | 'fair' | 'poor',
-    budget: number,
-    preferredCarType: string,
-    fuelType: 'electric' | 'hybrid' | 'gas',
-    maxDownPayment: number
-  ) => void;
   onViewDetails?: (carId: string) => void;
 }
 
-export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpdatePreferences, onViewDetails }: ProfileProps) {
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
+type CreditTier = 'excellent' | 'good' | 'fair' | 'poor';
+
+// Helper to convert API vehicle to CarCard format
+const convertVehicleToCard = (vehicle: Vehicle): Car => ({
+  id: vehicle.id.toString(),
+  name: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+  year: vehicle.year,
+  category: vehicle.truck ? 'truck' as const :
+            vehicle.model.toLowerCase().includes('sienna') ? 'minivan' as const :
+            vehicle.model.toLowerCase().includes('camry') || vehicle.model.toLowerCase().includes('corolla') || vehicle.model.toLowerCase().includes('prius') ? 'car' as const :
+            'suv' as const,
+  type: vehicle.trimName,
+  fuelType: vehicle.electric ? 'electric' as const :
+             vehicle.pluginElectric ? 'hybrid' as const :
+             'gas' as const,
+  price: vehicle.baseMsrp,
+  image: vehicle.CarImages?.[0]?.imageUrl || '/placeholder-car.jpg',
+  specs: {},
+  financeOptions: ['Loan', 'Lease'],
+  isTRD: vehicle.trimName.toUpperCase().includes('TRD'),
+});
+
+export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps) {
+  const [user, setUser] = useState<any>(null);
+  const [preferences, setPreferences] = useState<any>(null);
+  const [finances, setFinances] = useState<any>(null);
+  const [savedVehicles, setSavedVehicles] = useState<Car[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // Edit states
   const [isEditingPreferences, setIsEditingPreferences] = useState(false);
-  const [creditTier, setCreditTier] = useState(user.creditTier);
-  const [budget, setBudget] = useState(user.budget);
-  const [preferredCarType, setPreferredCarType] = useState(user.preferredCarType);
-  const [fuelType, setFuelType] = useState(user.fuelType);
-  const [maxDownPayment, setMaxDownPayment] = useState(user.maxDownPayment);
-
-  const handlePasswordChange = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (newPassword !== confirmPassword) {
-      alert('Passwords do not match');
-      return;
-    }
-    if (newPassword.length < 6) {
-      alert('Password must be at least 6 characters');
-      return;
-    }
-    onUpdatePassword(newPassword);
-    setNewPassword('');
-    setConfirmPassword('');
-    alert('Password updated successfully!');
-  };
-
-  const savedCarsList = cars.filter((car) => savedCars.includes(car.id));
+  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [editEmail, setEditEmail] = useState('');
+  const [editBudget, setEditBudget] = useState(50000);
+  const [editCarType, setEditCarType] = useState('suv');
+  const [editFuelType, setEditFuelType] = useState('gas');
+  const [editCreditTier, setEditCreditTier] = useState<CreditTier>('good');
 
   const creditTierLabels = {
     excellent: 'Excellent (720+)',
     good: 'Good (680-719)',
-    fair: 'Fair (630-679)',
-    poor: 'Poor (Below 630)',
+    fair: 'Fair (640-679)',
+    poor: 'Poor (Below 640)',
   };
+
+  // Load user data on mount
+  useEffect(() => {
+    loadUserData();
+  }, []);
+
+  // Load saved vehicles when savedCars changes
+  useEffect(() => {
+    if (savedCars.length > 0) {
+      loadSavedVehicles();
+    } else {
+      setSavedVehicles([]);
+    }
+  }, [savedCars]);
+
+  const loadUserData = async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      // Get user profile (basic info)
+      const userProfile = await authService.getProfile();
+      setUser(userProfile);
+      setEditEmail(userProfile.email);
+
+      // Get user preferences (optional - might not exist yet)
+      try {
+        const userPrefs = await userService.getPreferences();
+        setPreferences(userPrefs.UserPreferences || userPrefs);
+        setEditBudget(userPrefs.UserPreferences?.budget || userPrefs.budget || 50000);
+        setEditCarType(userPrefs.UserPreferences?.carType || userPrefs.carType || 'suv');
+        setEditFuelType(userPrefs.UserPreferences?.fuelType || userPrefs.fuelType || 'gas');
+      } catch (err) {
+        // Preferences don't exist yet - use defaults
+        console.log('No preferences found, using defaults');
+      }
+
+      // Get user finances (optional - might not exist yet)
+      try {
+        const userFin = await userService.getFinances();
+        setFinances(userFin.UserFinance || userFin);
+        setEditCreditTier((userFin.UserFinance?.creditTier || userFin.creditTier || 'good') as CreditTier);
+      } catch (err) {
+        // Finances don't exist yet - use defaults
+        console.log('No finances found, using defaults');
+      }
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const loadSavedVehicles = async () => {
+    try {
+      const allVehicles = await vehicleService.getVehicles();
+      const saved = allVehicles
+        .filter(v => savedCars.includes(v.id.toString()))
+        .map(convertVehicleToCard);
+      setSavedVehicles(saved);
+    } catch (err) {
+      console.error('Failed to load saved vehicles:', err);
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!editEmail || editEmail === user?.email) {
+      setIsEditingEmail(false);
+      return;
+    }
+
+    try {
+      await authService.updateEmail(editEmail);
+      setUser({ ...user, email: editEmail });
+      setIsEditingEmail(false);
+      alert('Email updated successfully!');
+    } catch (err) {
+      alert(`Failed to update email: ${getErrorMessage(err)}`);
+    }
+  };
+
+  const handleSavePreferences = async () => {
+    try {
+      // Save preferences
+      await userService.setPreferences({
+        budget: editBudget,
+        carType: editCarType,
+        fuelType: editFuelType,
+      });
+
+      // Save finances (credit tier)
+      await userService.setFinances({
+        creditScore: editCreditTier === 'excellent' ? 750 :
+                     editCreditTier === 'good' ? 690 :
+                     editCreditTier === 'fair' ? 650 : 600,
+        creditTier: editCreditTier,
+      });
+
+      // Reload data
+      await loadUserData();
+      setIsEditingPreferences(false);
+      alert('Preferences updated successfully!');
+    } catch (err) {
+      alert(`Failed to update preferences: ${getErrorMessage(err)}`);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <div className="flex-1 py-8">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="flex justify-center items-center py-20">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#eb0a1e] border-r-transparent"></div>
+              <p className="mt-4 text-gray-600">Loading profile...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="flex-1 py-8">
+        <div className="container mx-auto px-4 max-w-6xl">
+          <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4">
+            <p className="font-medium">Error loading profile</p>
+            <p className="text-sm mt-1">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={loadUserData}
+              className="mt-3"
+            >
+              Retry
+            </Button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="flex-1 py-8">
@@ -76,14 +216,32 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
             <CardHeader>
               <CardTitle>Account Information</CardTitle>
             </CardHeader>
-            <CardContent className="grid md:grid-cols-2 gap-4">
+            <CardContent className="space-y-4">
               <div>
-                <Label>Username</Label>
-                <p className="mt-1 text-gray-600">{user.username}</p>
+                <Label>Name</Label>
+                <p className="mt-1 text-gray-600">{user?.firstName} {user?.lastName}</p>
               </div>
               <div>
                 <Label>Email</Label>
-                <p className="mt-1 text-gray-600">{user.email}</p>
+                {isEditingEmail ? (
+                  <div className="flex gap-2 mt-1">
+                    <Input
+                      type="email"
+                      value={editEmail}
+                      onChange={(e) => setEditEmail(e.target.value)}
+                    />
+                    <Button onClick={handleUpdateEmail} size="sm">Save</Button>
+                    <Button onClick={() => {
+                      setEditEmail(user?.email);
+                      setIsEditingEmail(false);
+                    }} variant="outline" size="sm">Cancel</Button>
+                  </div>
+                ) : (
+                  <div className="flex gap-2 items-center mt-1">
+                    <p className="text-gray-600">{user?.email}</p>
+                    <Button onClick={() => setIsEditingEmail(true)} variant="outline" size="sm">Edit</Button>
+                  </div>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -110,23 +268,21 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
                     <Label>Credit Tier</Label>
-                    <p className="mt-1 text-gray-600">{creditTierLabels[user.creditTier]}</p>
+                    <p className="mt-1 text-gray-600">
+                      {creditTierLabels[(finances?.creditTier || 'good') as CreditTier]}
+                    </p>
                   </div>
                   <div>
                     <Label>Preferred Car Type</Label>
-                    <p className="mt-1 text-gray-600 capitalize">{user.preferredCarType}</p>
+                    <p className="mt-1 text-gray-600 capitalize">{preferences?.carType || 'Not set'}</p>
                   </div>
                   <div>
                     <Label>Fuel Type Preference</Label>
-                    <p className="mt-1 text-gray-600 capitalize">{user.fuelType}</p>
+                    <p className="mt-1 text-gray-600 capitalize">{preferences?.fuelType || 'Not set'}</p>
                   </div>
                   <div>
                     <Label>Budget</Label>
-                    <p className="mt-1 text-gray-600">${user.budget.toLocaleString()}</p>
-                  </div>
-                  <div>
-                    <Label>Maximum Down Payment</Label>
-                    <p className="mt-1 text-gray-600">${user.maxDownPayment.toLocaleString()}</p>
+                    <p className="mt-1 text-gray-600">${(preferences?.budget || 0).toLocaleString()}</p>
                   </div>
                 </div>
               ) : (
@@ -134,23 +290,23 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
                   <div className="grid md:grid-cols-2 gap-4">
                     <div className="space-y-2">
                       <Label htmlFor="creditTier">Credit Tier</Label>
-                      <Select value={creditTier} onValueChange={(value) => setCreditTier(value as any)}>
+                      <Select value={editCreditTier} onValueChange={(value) => setEditCreditTier(value as CreditTier)}>
                         <SelectTrigger id="creditTier">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="excellent">Excellent (720+)</SelectItem>
                           <SelectItem value="good">Good (680-719)</SelectItem>
-                          <SelectItem value="fair">Fair (630-679)</SelectItem>
-                          <SelectItem value="poor">Poor (Below 630)</SelectItem>
+                          <SelectItem value="fair">Fair (640-679)</SelectItem>
+                          <SelectItem value="poor">Poor (Below 640)</SelectItem>
                         </SelectContent>
                       </Select>
                     </div>
 
                     <div className="space-y-2">
-                      <Label htmlFor="preferredCarType">Preferred Car Type</Label>
-                      <Select value={preferredCarType} onValueChange={setPreferredCarType}>
-                        <SelectTrigger id="preferredCarType">
+                      <Label htmlFor="carType">Preferred Car Type</Label>
+                      <Select value={editCarType} onValueChange={setEditCarType}>
+                        <SelectTrigger id="carType">
                           <SelectValue />
                         </SelectTrigger>
                         <SelectContent>
@@ -158,7 +314,6 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
                           <SelectItem value="suv">SUV</SelectItem>
                           <SelectItem value="truck">Truck</SelectItem>
                           <SelectItem value="coupe">Coupe</SelectItem>
-                          <SelectItem value="hatchback">Hatchback</SelectItem>
                           <SelectItem value="minivan">Minivan</SelectItem>
                         </SelectContent>
                       </Select>
@@ -167,7 +322,7 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
 
                   <div className="space-y-2">
                     <Label htmlFor="fuelType">Fuel Type Preference</Label>
-                    <Select value={fuelType} onValueChange={(value) => setFuelType(value as any)}>
+                    <Select value={editFuelType} onValueChange={setEditFuelType}>
                       <SelectTrigger id="fuelType">
                         <SelectValue />
                       </SelectTrigger>
@@ -180,33 +335,15 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="budget">Budget: ${budget.toLocaleString()}</Label>
+                    <Label htmlFor="budget">Budget: ${editBudget.toLocaleString()}</Label>
                     <input
                       id="budget"
                       type="range"
                       min={0}
                       max={100000}
                       step={5000}
-                      value={budget}
-                      onChange={(e) => setBudget(Number(e.target.value))}
-                      className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#eb0a1e]"
-                    />
-                    <div className="flex justify-between text-xs text-gray-500">
-                      <span>$0</span>
-                      <span>$100,000</span>
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="maxDownPayment">Maximum Down Payment: ${maxDownPayment.toLocaleString()}</Label>
-                    <input
-                      id="maxDownPayment"
-                      type="range"
-                      min={0}
-                      max={100000}
-                      step={1000}
-                      value={maxDownPayment}
-                      onChange={(e) => setMaxDownPayment(Number(e.target.value))}
+                      value={editBudget}
+                      onChange={(e) => setEditBudget(Number(e.target.value))}
                       className="w-full h-2 bg-gray-200 rounded-lg appearance-none cursor-pointer accent-[#eb0a1e]"
                     />
                     <div className="flex justify-between text-xs text-gray-500">
@@ -216,14 +353,7 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
                   </div>
 
                   <Button
-                    onClick={() => {
-                      // In a real app, this would save to the backend
-                      alert('Preferences updated! (Note: This is a demo - changes are local only)');
-                      setIsEditingPreferences(false);
-                      if (onUpdatePreferences) {
-                        onUpdatePreferences(creditTier, budget, preferredCarType, fuelType, maxDownPayment);
-                      }
-                    }}
+                    onClick={handleSavePreferences}
                     className="bg-[#eb0a1e] hover:bg-[#c4091a]"
                   >
                     Save Preferences
@@ -233,63 +363,19 @@ export function Profile({ user, savedCars, onToggleSave, onUpdatePassword, onUpd
             </CardContent>
           </Card>
 
-          {/* Change Password */}
-          <Card>
-            <CardHeader>
-              <CardTitle>Change Password</CardTitle>
-              <CardDescription>Update your account password</CardDescription>
-            </CardHeader>
-            <CardContent>
-              <form onSubmit={handlePasswordChange} className="space-y-4">
-                <div className="grid md:grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <Label htmlFor="newPassword">New Password</Label>
-                    <Input
-                      id="newPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="confirmPassword">Confirm Password</Label>
-                    <Input
-                      id="confirmPassword"
-                      type="password"
-                      placeholder="••••••••"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                  </div>
-                </div>
-
-                <Button
-                  type="submit"
-                  className="bg-[#eb0a1e] hover:bg-[#c4091a]"
-                >
-                  Update Password
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
           {/* Saved Cars */}
           <Card>
             <CardHeader>
               <CardTitle>Saved Cars</CardTitle>
               <CardDescription>
-                {savedCarsList.length}{' '}
-                {savedCarsList.length === 1 ? 'vehicle' : 'vehicles'} saved
+                {savedVehicles.length}{' '}
+                {savedVehicles.length === 1 ? 'vehicle' : 'vehicles'} saved
               </CardDescription>
             </CardHeader>
             <CardContent>
-              {savedCarsList.length > 0 ? (
+              {savedVehicles.length > 0 ? (
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
-                  {savedCarsList.map((car) => (
+                  {savedVehicles.map((car) => (
                     <CarCard
                       key={car.id}
                       car={car}

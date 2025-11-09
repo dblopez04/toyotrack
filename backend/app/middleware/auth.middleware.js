@@ -6,7 +6,14 @@ const JWT_SECRET = process.env.JWT_SECRET;
 
 exports.verifyToken = (req, res, next) => {
     try {
-        const token = req.cookies.accessToken;
+        let token = req.cookies.accessToken;
+
+        if (!token) {
+            const authHeader = req.headers.authorization;
+            if (authHeader && authHeader.startsWith('Bearer ')) {
+                token = authHeader.substring(7);
+            }
+        }
 
         if (!token) {
             return res.status(401).send({ message: "No access token provided" });
@@ -17,6 +24,7 @@ exports.verifyToken = (req, res, next) => {
                 return res.status(401).send({ message: "Invalid access token" });
             }
 
+            req.id = decoded.user_id;
             req.user_id = decoded.user_id;
             next();
         });

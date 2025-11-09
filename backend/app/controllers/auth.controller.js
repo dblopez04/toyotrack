@@ -34,7 +34,7 @@ const generateRefreshToken = (user) => {
 
 exports.register = async (req, res) => {
     try {
-        const { email, password } = req.body;
+        const { email, password, firstName, lastName, phoneNumber } = req.body;
 
         if (!email || !password) {
             return res.status(400).send({
@@ -46,7 +46,10 @@ exports.register = async (req, res) => {
 
         const user = await User.create({
             email: email,
-            password: hashedPassword
+            password: hashedPassword,
+            firstName: firstName,
+            lastName: lastName,
+            phoneNumber: phoneNumber
         });
 
         const accessToken = generateAccessToken(user);
@@ -59,9 +62,13 @@ exports.register = async (req, res) => {
 
         res.status(201).send({
             message: "User registered successfully!",
+            token: accessToken,
             user: {
                 id: user.id,
-                email: user.email
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                phoneNumber: user.phoneNumber
             }
         });
     } catch (err) {
@@ -108,9 +115,13 @@ exports.login = async (req, res) => {
 
         res.status(200).send({
             message: "Login successful",
+            token: accessToken,
             user: {
                 id: user.id,
-                email: user.email
+                email: user.email,
+                firstName: user.firstName,
+                lastName: user.lastName,
+                phoneNumber: user.phoneNumber
             }
         });
     } catch (err) {

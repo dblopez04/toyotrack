@@ -3,6 +3,8 @@ import { Button } from './ui/button';
 import { Input } from './ui/input';
 import { Card } from './ui/card';
 import { Send } from 'lucide-react';
+import chatService from '../services/chat';
+import { getErrorMessage } from '../services/api';
 
 interface Message {
   id: string;
@@ -21,9 +23,10 @@ export function ChatFinance() {
     },
   ]);
   const [inputValue, setInputValue] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSend = () => {
-    if (!inputValue.trim()) return;
+  const handleSend = async () => {
+    if (!inputValue.trim() || isLoading) return;
 
     const userMessage: Message = {
       id: Date.now().toString(),
@@ -34,17 +37,37 @@ export function ChatFinance() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
+    setIsLoading(true);
 
-    // Simulate bot response
-    setTimeout(() => {
+    try {
+      // Build conversation history in the format the backend expects
+      const history = messages.slice(1).map(msg => ({
+        role: msg.sender === 'user' ? 'user' : 'assistant',
+        content: msg.text
+      }));
+
+      // Call the chat API with message and history
+      const response = await chatService.sendMessage(inputValue, history);
+
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: "Thanks for your question! I can help you with financing options, lease terms, interest rates, and payment calculations. This is a demo, so responses are simulated. In a real application, I'd provide detailed financing information.",
+        text: response.response,
+        sender: 'bot',
+        timestamp: new Date(response.timestamp),
+      };
+      setMessages((prev) => [...prev, botMessage]);
+    } catch (error) {
+      // Show error message in chat
+      const errorMessage: Message = {
+        id: (Date.now() + 1).toString(),
+        text: `Sorry, I encountered an error: ${getErrorMessage(error)}. Please try again.`,
         sender: 'bot',
         timestamp: new Date(),
       };
-      setMessages((prev) => [...prev, botMessage]);
-    }, 1000);
+      setMessages((prev) => [...prev, errorMessage]);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -98,12 +121,18 @@ export function ChatFinance() {
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
                 onKeyPress={handleKeyPress}
+                disabled={isLoading}
               />
               <Button
                 onClick={handleSend}
                 className="bg-[#eb0a1e] hover:bg-[#c4091a]"
+                disabled={isLoading}
               >
-                <Send className="h-4 w-4" />
+                {isLoading ? (
+                  <div className="h-4 w-4 animate-spin rounded-full border-2 border-solid border-white border-r-transparent" />
+                ) : (
+                  <Send className="h-4 w-4" />
+                )}
               </Button>
             </div>
           </div>

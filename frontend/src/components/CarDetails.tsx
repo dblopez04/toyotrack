@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
@@ -8,6 +8,14 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from './ui/tabs';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
 import { Car } from '../data/cars';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import financeService from '../services/finance';
+import { getErrorMessage } from '../services/api';
+
+interface CreditTierData {
+  tier: string;
+  apr: number;
+  aprPercent: string;
+}
 
 interface CarDetailsProps {
   car: Car;
@@ -16,8 +24,8 @@ interface CarDetailsProps {
   onBack: () => void;
 }
 
-// APR rates by credit tier
-const APR_BY_TIER = {
+// Fallback APR rates (in case API fails)
+const FALLBACK_APR_BY_TIER = {
   excellent: 0.049,
   good: 0.069,
   fair: 0.099,
@@ -31,13 +39,46 @@ const RESIDUAL_BY_TERM: { [key: number]: number } = {
   48: 0.55,
 };
 
-type CreditTier = keyof typeof APR_BY_TIER;
+type CreditTier = 'excellent' | 'good' | 'fair' | 'poor';
 
 export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsProps) {
   const [financeType, setFinanceType] = useState<'finance' | 'lease'>('finance');
   const [downPayment, setDownPayment] = useState(5000);
   const [loanTerm, setLoanTerm] = useState(60);
   const [creditTier, setCreditTier] = useState<CreditTier>('good');
+  const [creditTiers, setCreditTiers] = useState<CreditTierData[]>([]);
+  const [isLoadingRates, setIsLoadingRates] = useState(false);
+  const [ratesError, setRatesError] = useState<string | null>(null);
+
+  // Fetch credit tiers on mount
+  useEffect(() => {
+    const fetchCreditTiers = async () => {
+      setIsLoadingRates(true);
+      setRatesError(null);
+      try {
+        const data = await financeService.getCreditTiers();
+        setCreditTiers(data);
+      } catch (err) {
+        setRatesError(getErrorMessage(err));
+        console.error('Failed to load credit tiers, using fallback values:', err);
+      } finally {
+        setIsLoadingRates(false);
+      }
+    };
+
+    fetchCreditTiers();
+  }, []);
+
+  // Get APR for current credit tier from API or fallback
+  const getAPR = (): number => {
+    if (creditTiers.length > 0) {
+      const tierData = creditTiers.find(
+        t => t.tier.toLowerCase() === creditTier.toLowerCase()
+      );
+      if (tierData) return tierData.apr; // Already in decimal format
+    }
+    return FALLBACK_APR_BY_TIER[creditTier];
+  };
   
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -60,12 +101,12 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
   // Calculate monthly payment for financing
   const calculateFinancePayment = () => {
     const principle = car.price - downPayment;
-    const apr = APR_BY_TIER[creditTier];
+    const apr = getAPR();
     const monthlyRate = apr / 12;
     const months = loanTerm;
-    
+
     if (principle <= 0) return 0;
-    
+
     const monthlyPayment = (principle * monthlyRate) / (1 - Math.pow(1 + monthlyRate, -months));
     return monthlyPayment;
   };
@@ -73,30 +114,30 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
   // Calculate monthly payment for leasing
   const calculateLeasePayment = () => {
     const capCost = car.price - downPayment;
-    const apr = APR_BY_TIER[creditTier];
+    const apr = getAPR();
     const monthlyRate = apr / 12;
     const residualPercent = RESIDUAL_BY_TERM[loanTerm] ?? 0.55;
     const residualValue = car.price * residualPercent;
-    
+
     if (capCost <= 0) return { monthlyPayment: 0, residualValue: 0 };
-    
+
     const depreciationMonthly = (capCost - residualValue) / loanTerm;
     const financeMonthly = (capCost + residualValue) * monthlyRate;
     const monthlyPayment = depreciationMonthly + financeMonthly;
-    
+
     return { monthlyPayment, residualValue };
   };
 
   const isFinance = financeType === 'finance';
-  const monthlyPayment = isFinance 
-    ? calculateFinancePayment() 
+  const monthlyPayment = isFinance
+    ? calculateFinancePayment()
     : calculateLeasePayment().monthlyPayment;
-  
+
   const leaseDetails = !isFinance ? calculateLeasePayment() : null;
   const totalAmount = isFinance ? monthlyPayment * loanTerm : 0;
   const totalInterest = isFinance ? totalAmount - (car.price - downPayment) : 0;
   const dueAtSigning = isFinance ? downPayment : downPayment + monthlyPayment + 500; // Adding $500 lease fees
-  const apr = APR_BY_TIER[creditTier];
+  const apr = getAPR();
 
   // Finance supports all terms, lease typically shorter
   const loanTermOptions = isFinance ? [24, 36, 48, 60, 72] : [24, 36, 48];
@@ -227,10 +268,10 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="excellent">Excellent (720+) - {(APR_BY_TIER.excellent * 100).toFixed(1)}% APR</SelectItem>
-                  <SelectItem value="good">Good (680-719) - {(APR_BY_TIER.good * 100).toFixed(1)}% APR</SelectItem>
-                  <SelectItem value="fair">Fair (640-679) - {(APR_BY_TIER.fair * 100).toFixed(1)}% APR</SelectItem>
-                  <SelectItem value="poor">Poor (Below 640) - {(APR_BY_TIER.poor * 100).toFixed(1)}% APR</SelectItem>
+                  <SelectItem value="excellent">Excellent (720+) - {(FALLBACK_APR_BY_TIER.excellent * 100).toFixed(1)}% APR</SelectItem>
+                  <SelectItem value="good">Good (680-719) - {(FALLBACK_APR_BY_TIER.good * 100).toFixed(1)}% APR</SelectItem>
+                  <SelectItem value="fair">Fair (640-679) - {(FALLBACK_APR_BY_TIER.fair * 100).toFixed(1)}% APR</SelectItem>
+                  <SelectItem value="poor">Poor (Below 640) - {(FALLBACK_APR_BY_TIER.poor * 100).toFixed(1)}% APR</SelectItem>
                 </SelectContent>
               </Select>
             </div>

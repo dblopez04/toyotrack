@@ -1,6 +1,6 @@
 const { GoogleGenAI } = require("@google/genai");
 const db = require("../models");
-const genAI = new GoogleGenAI(process.env.GEMINI_API_KEY);
+const genAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
 
 async function userContext(userId){
     const context = [];
@@ -66,43 +66,28 @@ async function userContext(userId){
         return context.length > 0 ? context.join('\n') : null;
 
     } catch (err) {
-        res.status(500).send({ message: err.message });
+        console.error('Error getting user context:', err);
+        return null;
     }
 }
 
 function createSystemPrompt(userContext) {
-    let prompt = `You are ToyoTrack's AI finance assistant, an expert in automotive financing and leasing for Toyota vehicles.
+    let prompt = `You are ToyoTrack's AI finance assistant for Toyota vehicles.
 
-    Your Role:
-    - Help users understand financing vs leasing
-    - Explain payment calculations and terms
-    - Provide advice on credit tiers and APR rates
-    - Answer questions about down payments, term lengths, and total costs
-    - Be friendly, professional, and educational
+    Keep responses SHORT (2-4 sentences max). Be direct and helpful.
 
-    Available Financing Options:
-    - Credit Tiers: Excellent (4.9% APR), Good (6.9% APR), Fair (9.9% APR), Poor (14.9% APR)
-    - Finance Terms: 24, 36, 48, 60, or 72 months
-    - Lease Terms: 24, 36, or 48 months
-    - Lease Residual Values: 24mo (65%), 36mo (60%), 48mo (55%)
+    Key Info:
+    - Credit Tiers: Excellent (4.9%), Good (6.9%), Fair (9.9%), Poor (14.9%)
+    - Finance: 24-72 months | Lease: 24-48 months
+    - Finance = you own it, higher payments | Lease = lower payments, mileage limits
 
-    Finance Payment Formula: payment = P x (r / (1 - (1 + r)^(-n)))
-    where P = price - down payment, r = monthly rate (APR/12), n = months
-
-    Lease Payment: Depreciation + Finance Charge
-    - Depreciation = (Capitalized Cost - Residual Value) / months
-    - Finance Charge = (Capitalized Cost + Residual Value) x monthly rate
-
-    Important Guidelines:
-    - If asked to calculate, remind users they can get exact quotes through the app
-    - Focus on education rather than making decisions for users
-    - Be concise but thorough
-    - Use simple language to explain complex finance concepts
-    - Always mention that rates and payments are estimates`;
+    Guidelines:
+    - Answer the question directly, skip fluff
+    - There is no text formatting in our chat site so please just use plaintext.
+    - Keep it simple and conversational`;
 
     if (userContext) {
-        prompt += `\n\nCurrent User Information:\n${userContext}`;
-        prompt += `\n\nUse this information to provide personalized advice, but don't mention specific details unless relevant to the question.`;
+        prompt += `\n\nUser: ${userContext}`;
     }
 
     return prompt;
@@ -131,29 +116,31 @@ exports.sendMessage = async (req, res) => {
         const context = await userContext(userId);
         const systemPrompt = createSystemPrompt(context);
 
-        const model = genAI.getGenerativeModel({
-            model: "gemini-1.5-flash",
-            systemInstruction: systemPrompt
+        // Build the full prompt with system instruction and history
+        let fullPrompt = systemPrompt + "\n\n";
+
+        // Add conversation history
+        if (history && history.length > 0) {
+            fullPrompt += "Conversation History:\n";
+            history.forEach(msg => {
+                fullPrompt += `${msg.role === 'user' ? 'User' : 'Assistant'}: ${msg.content}\n`;
+            });
+            fullPrompt += "\n";
+        }
+
+        fullPrompt += `User: ${message}\nAssistant:`;
+
+        const result = await genAI.models.generateContent({
+            model: 'gemini-2.0-flash-exp',
+            contents: fullPrompt,
         });
 
-        const formattedHistory = formatConversationHistory(history);
-
-        const chat = model.startChat({
-            history: formattedHistory,
-            generationConfig: {
-                maxOutputTokens: 500,
-                temperature: 0.7,
-            },
-        });
-
-        const result = await chat.sendMessage(message);
-        const response = result.response.text();
+        const response = result.text;
 
         res.send({
             response,
             timestamp: new Date().toISOString()
         });
-
 
     } catch (err) {
         console.error("Chat error:", err);

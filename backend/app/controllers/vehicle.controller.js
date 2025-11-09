@@ -28,23 +28,30 @@ exports.getAllVehicles = async (req, res) => {
       where.model = { [Op.iLike]: `%${req.query.search}%` };
     }
 
+    // Support pagination if requested, otherwise return all vehicles
     const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 12;
-    const offset = (page - 1) * limit;
+    const limit = req.query.limit ? parseInt(req.query.limit) : null;
+    const offset = limit ? (page - 1) * limit : 0;
 
-    const { count, rows } = await Vehicle.findAndCountAll({
+    const queryOptions = {
       where: where,
       include: [{ model: CarImage, as: 'CarImages' }],
-      limit: limit,
-      offset: offset,
       order: [['baseMsrp', 'ASC']]
-    });
+    };
+
+    // Only add pagination if limit is specified
+    if (limit) {
+      queryOptions.limit = limit;
+      queryOptions.offset = offset;
+    }
+
+    const { count, rows } = await Vehicle.findAndCountAll(queryOptions);
 
     res.json({
       vehicles: rows,
       total: count,
       page: page,
-      totalPages: Math.ceil(count / limit)
+      totalPages: limit ? Math.ceil(count / limit) : 1
     });
 
   } catch (error) {

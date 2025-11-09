@@ -10,6 +10,8 @@ import { Profile } from './components/Profile';
 import { CarDetails } from './components/CarDetails';
 import { Compare } from './components/Compare';
 import { cars } from './data/cars';
+import authService from './services/auth';
+import { User } from './types/api';
 
 type Page =
   | 'landing'
@@ -23,124 +25,54 @@ type Page =
   | 'car-details'
   | 'compare';
 
-interface User {
-  username: string;
-  email: string;
-  password: string;
-  creditTier: 'excellent' | 'good' | 'fair' | 'poor';
-  budget: number;
-  preferredCarType: string;
-  fuelType: 'electric' | 'hybrid' | 'gas';
-  maxDownPayment: number;
-}
-
 export default function App() {
   const [currentPage, setCurrentPage] = useState<Page>('landing');
   const [currentUser, setCurrentUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
   const [savedCars, setSavedCars] = useState<string[]>([]);
   const [selectedCarId, setSelectedCarId] = useState<string | null>(null);
   const [compareCarIds, setCompareCarIds] = useState<[string, string] | null>(null);
+  const [availableCars, setAvailableCars] = useState<typeof cars>(cars);
 
-  // Load data from localStorage on mount
+  // Check authentication on mount
   useEffect(() => {
-    const storedUsers = localStorage.getItem('toyotrack_users');
-    const storedUser = localStorage.getItem('toyotrack_current_user');
-    const storedSavedCars = localStorage.getItem('toyotrack_saved_cars');
-
-    if (storedUsers) {
-      const parsedUsers = JSON.parse(storedUsers);
-      // Migrate old users to include new onboarding fields
-      const migratedUsers = parsedUsers.map((user: any) => ({
-        ...user,
-        creditTier: user.creditTier || 'good',
-        budget: user.budget || 50000,
-        preferredCarType: user.preferredCarType || 'sedan',
-        fuelType: user.fuelType || 'gas',
-        maxDownPayment: user.maxDownPayment || 10000,
-      }));
-      setUsers(migratedUsers);
-    }
-    if (storedUser) {
-      const parsedUser = JSON.parse(storedUser);
-      // Migrate current user to include new onboarding fields
-      const migratedUser = {
-        ...parsedUser,
-        creditTier: parsedUser.creditTier || 'good',
-        budget: parsedUser.budget || 50000,
-        preferredCarType: parsedUser.preferredCarType || 'sedan',
-        fuelType: parsedUser.fuelType || 'gas',
-        maxDownPayment: parsedUser.maxDownPayment || 10000,
-      };
-      setCurrentUser(migratedUser);
+    const user = authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
       setCurrentPage('finance');
     }
+
+    // Load saved cars from localStorage
+    const storedSavedCars = localStorage.getItem('toyotrack_saved_cars');
     if (storedSavedCars) {
       setSavedCars(JSON.parse(storedSavedCars));
     }
   }, []);
-
-  // Save users to localStorage
-  useEffect(() => {
-    localStorage.setItem('toyotrack_users', JSON.stringify(users));
-  }, [users]);
-
-  // Save current user to localStorage
-  useEffect(() => {
-    if (currentUser) {
-      localStorage.setItem('toyotrack_current_user', JSON.stringify(currentUser));
-    } else {
-      localStorage.removeItem('toyotrack_current_user');
-    }
-  }, [currentUser]);
 
   // Save saved cars to localStorage
   useEffect(() => {
     localStorage.setItem('toyotrack_saved_cars', JSON.stringify(savedCars));
   }, [savedCars]);
 
-  const handleSignUp = (
-    username: string, 
-    email: string, 
-    password: string,
-    creditTier: 'excellent' | 'good' | 'fair' | 'poor',
-    budget: number,
-    preferredCarType: string,
-    fuelType: 'electric' | 'hybrid' | 'gas',
-    maxDownPayment: number
-  ) => {
-    const existingUser = users.find((u) => u.email === email);
-    if (existingUser) {
-      alert('Email already exists!');
-      return;
-    }
-
-    const newUser = { 
-      username, 
-      email, 
-      password, 
-      creditTier, 
-      budget, 
-      preferredCarType, 
-      fuelType, 
-      maxDownPayment 
-    };
-    setUsers([...users, newUser]);
-    setCurrentUser(newUser);
-    setCurrentPage('finance');
-  };
-
-  const handleLogin = (email: string, password: string) => {
-    const user = users.find((u) => u.email === email && u.password === password);
+  // Handle signup - auth is handled in the SignUp component via useAuth hook
+  const handleSignUp = (email: string) => {
+    const user = authService.getCurrentUser();
     if (user) {
       setCurrentUser(user);
       setCurrentPage('finance');
-    } else {
-      alert('Invalid credentials!');
+    }
+  };
+
+  // Handle login - auth is handled in the Login component via useAuth hook
+  const handleLogin = (email: string) => {
+    const user = authService.getCurrentUser();
+    if (user) {
+      setCurrentUser(user);
+      setCurrentPage('finance');
     }
   };
 
   const handleLogout = () => {
+    authService.logout();
     setCurrentUser(null);
     setSavedCars([]);
     setCurrentPage('landing');
@@ -180,34 +112,6 @@ export default function App() {
     setCurrentPage('finance');
   };
 
-  const handleUpdatePassword = (newPassword: string) => {
-    if (!currentUser) return;
-
-    const updatedUser = { ...currentUser, password: newPassword };
-    setCurrentUser(updatedUser);
-    setUsers(users.map((u) => (u.email === currentUser.email ? updatedUser : u)));
-  };
-
-  const handleUpdatePreferences = (
-    creditTier: 'excellent' | 'good' | 'fair' | 'poor',
-    budget: number,
-    preferredCarType: string,
-    fuelType: 'electric' | 'hybrid' | 'gas',
-    maxDownPayment: number
-  ) => {
-    if (!currentUser) return;
-
-    const updatedUser = { 
-      ...currentUser, 
-      creditTier, 
-      budget, 
-      preferredCarType, 
-      fuelType, 
-      maxDownPayment 
-    };
-    setCurrentUser(updatedUser);
-    setUsers(users.map((u) => (u.email === currentUser.email ? updatedUser : u)));
-  };
 
   const renderPage = () => {
     switch (currentPage) {
@@ -219,11 +123,12 @@ export default function App() {
         return <SignUp onSignUp={handleSignUp} onNavigate={handleNavigate} />;
       case 'finance':
         return (
-          <FinanceCar 
-            savedCars={savedCars} 
+          <FinanceCar
+            savedCars={savedCars}
             onToggleSave={handleToggleSave}
             onViewDetails={handleViewCarDetails}
             onCompare={handleCompare}
+            onCarsLoaded={setAvailableCars}
           />
         );
       case 'chat':
@@ -231,16 +136,13 @@ export default function App() {
       case 'profile':
         return currentUser ? (
           <Profile
-            user={currentUser}
             savedCars={savedCars}
             onToggleSave={handleToggleSave}
-            onUpdatePassword={handleUpdatePassword}
-            onUpdatePreferences={handleUpdatePreferences}
             onViewDetails={handleViewCarDetails}
           />
         ) : null;
       case 'car-details':
-        const selectedCar = cars.find((car) => car.id === selectedCarId);
+        const selectedCar = availableCars.find((car) => car.id === selectedCarId);
         return selectedCar ? (
           <CarDetails
             car={selectedCar}
@@ -252,8 +154,8 @@ export default function App() {
       case 'compare':
         if (compareCarIds) {
           const compareCars = compareCarIds
-            .map((id) => cars.find((car) => car.id === id))
-            .filter((car): car is typeof cars[0] => car !== undefined);
+            .map((id) => availableCars.find((car) => car.id === id))
+            .filter((car): car is typeof availableCars[0] => car !== undefined);
           
           if (compareCars.length === 2) {
             return (

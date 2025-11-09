@@ -1,22 +1,49 @@
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { Input } from './ui/input';
 import { Button } from './ui/button';
 import { Search, ArrowRightLeft } from 'lucide-react';
-import { cars } from '../data/cars';
 import { CarCard } from './CarCard';
 import { FilterDialog, FilterState } from './FilterDialog';
+import vehicleService from '../services/vehicle';
+import { Vehicle } from '../types/api';
+import { getErrorMessage } from '../services/api';
+import { Car } from '../data/cars';
 
 interface FinanceCarProps {
   savedCars: string[];
   onToggleSave: (carId: string) => void;
   onViewDetails?: (carId: string) => void;
   onCompare?: (carIds: [string, string]) => void;
+  onCarsLoaded?: (cars: Car[]) => void;
 }
 
-export function FinanceCar({ savedCars, onToggleSave, onViewDetails, onCompare }: FinanceCarProps) {
+// Helper to convert API vehicle to CarCard format
+const convertVehicleToCard = (vehicle: Vehicle): Car => ({
+  id: vehicle.id.toString(),
+  name: `${vehicle.year} ${vehicle.make} ${vehicle.model}`,
+  year: vehicle.year,
+  category: vehicle.truck ? 'truck' as const :
+            vehicle.model.toLowerCase().includes('sienna') ? 'minivan' as const :
+            vehicle.model.toLowerCase().includes('camry') || vehicle.model.toLowerCase().includes('corolla') || vehicle.model.toLowerCase().includes('prius') ? 'car' as const :
+            'suv' as const,
+  type: vehicle.trimName,
+  fuelType: vehicle.electric ? 'electric' as const :
+             vehicle.pluginElectric ? 'hybrid' as const :
+             'gas' as const,
+  price: vehicle.baseMsrp,
+  image: vehicle.CarImages?.[0]?.imageUrl || '/placeholder-car.jpg',
+  specs: {},
+  financeOptions: ['Loan', 'Lease'],
+  isTRD: vehicle.trimName.toUpperCase().includes('TRD'),
+});
+
+export function FinanceCar({ savedCars, onToggleSave, onViewDetails, onCompare, onCarsLoaded }: FinanceCarProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [compareMode, setCompareMode] = useState(false);
   const [selectedForCompare, setSelectedForCompare] = useState<string[]>([]);
+  const [vehicles, setVehicles] = useState<Vehicle[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   const [filters, setFilters] = useState<FilterState>({
     priceRange: [0, 100000],
     categories: [],
@@ -25,7 +52,35 @@ export function FinanceCar({ savedCars, onToggleSave, onViewDetails, onCompare }
     trdOnly: false,
   });
 
+  // Fetch vehicles from API
+  useEffect(() => {
+    const fetchVehicles = async () => {
+      setIsLoading(true);
+      setError(null);
+      try {
+        const data = await vehicleService.getVehicles();
+        setVehicles(data);
+      } catch (err) {
+        setError(getErrorMessage(err));
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    fetchVehicles();
+  }, []);
+
+  // Notify parent when vehicles are loaded
+  useEffect(() => {
+    if (vehicles.length > 0 && onCarsLoaded) {
+      const cars = vehicles.map(convertVehicleToCard);
+      onCarsLoaded(cars);
+    }
+  }, [vehicles, onCarsLoaded]);
+
   const filteredCars = useMemo(() => {
+    const cars = vehicles.map(convertVehicleToCard);
+
     return cars.filter((car) => {
       // Search query
       if (
@@ -65,7 +120,7 @@ export function FinanceCar({ savedCars, onToggleSave, onViewDetails, onCompare }
 
       return true;
     });
-  }, [searchQuery, filters]);
+  }, [vehicles, searchQuery, filters]);
 
   const handleToggleCompareSelection = (carId: string) => {
     setSelectedForCompare((prev) => {
@@ -147,31 +202,57 @@ export function FinanceCar({ savedCars, onToggleSave, onViewDetails, onCompare }
           <FilterDialog filters={filters} onApplyFilters={setFilters} />
         </div>
 
-        <div className="mb-4 text-gray-600">
-          Showing {filteredCars.length} {filteredCars.length === 1 ? 'vehicle' : 'vehicles'}
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {filteredCars.map((car) => (
-            <CarCard
-              key={car.id}
-              car={car}
-              isSaved={savedCars.includes(car.id)}
-              onToggleSave={onToggleSave}
-              onViewDetails={compareMode ? undefined : onViewDetails}
-              compareMode={compareMode}
-              isSelectedForCompare={selectedForCompare.includes(car.id)}
-              onToggleCompareSelection={compareMode ? handleToggleCompareSelection : undefined}
-            />
-          ))}
-        </div>
-
-        {filteredCars.length === 0 && (
-          <div className="text-center py-12">
-            <p className="text-gray-600">
-              No vehicles found matching your criteria. Try adjusting your filters.
-            </p>
+        {error && (
+          <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-4 mb-6">
+            <p className="font-medium">Error loading vehicles</p>
+            <p className="text-sm mt-1">{error}</p>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => window.location.reload()}
+              className="mt-3"
+            >
+              Retry
+            </Button>
           </div>
+        )}
+
+        {isLoading ? (
+          <div className="flex justify-center items-center py-20">
+            <div className="text-center">
+              <div className="inline-block h-8 w-8 animate-spin rounded-full border-4 border-solid border-[#eb0a1e] border-r-transparent"></div>
+              <p className="mt-4 text-gray-600">Loading vehicles...</p>
+            </div>
+          </div>
+        ) : (
+          <>
+            <div className="mb-4 text-gray-600">
+              Showing {filteredCars.length} {filteredCars.length === 1 ? 'vehicle' : 'vehicles'}
+            </div>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {filteredCars.map((car) => (
+                <CarCard
+                  key={car.id}
+                  car={car}
+                  isSaved={savedCars.includes(car.id)}
+                  onToggleSave={onToggleSave}
+                  onViewDetails={compareMode ? undefined : onViewDetails}
+                  compareMode={compareMode}
+                  isSelectedForCompare={selectedForCompare.includes(car.id)}
+                  onToggleCompareSelection={compareMode ? handleToggleCompareSelection : undefined}
+                />
+              ))}
+            </div>
+
+            {!error && filteredCars.length === 0 && (
+              <div className="text-center py-12">
+                <p className="text-gray-600">
+                  No vehicles found matching your criteria. Try adjusting your filters.
+                </p>
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>

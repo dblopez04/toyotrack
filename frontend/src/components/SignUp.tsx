@@ -4,43 +4,67 @@ import { Input } from './ui/input';
 import { Label } from './ui/label';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from './ui/select';
+import { useAuth } from '../hooks/useAuth';
+import { getErrorMessage } from '../services/api';
 
 interface SignUpProps {
-  onSignUp: (
-    username: string, 
-    email: string, 
-    password: string,
-    creditTier: 'excellent' | 'good' | 'fair' | 'poor',
-    budget: number,
-    preferredCarType: string,
-    fuelType: 'electric' | 'hybrid' | 'gas',
-    maxDownPayment: number
-  ) => void;
+  onSignUp: (email: string) => void;
   onNavigate: (page: string) => void;
 }
 
 export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
-  const [username, setUsername] = useState('');
+  const { register } = useAuth();
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
   const [email, setEmail] = useState('');
+  const [phoneNumber, setPhoneNumber] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Optional preferences (can be saved to user preferences later)
   const [creditTier, setCreditTier] = useState<'excellent' | 'good' | 'fair' | 'poor'>('good');
   const [budget, setBudget] = useState(50000);
   const [preferredCarType, setPreferredCarType] = useState('sedan');
   const [fuelType, setFuelType] = useState<'electric' | 'hybrid' | 'gas'>('gas');
   const [maxDownPayment, setMaxDownPayment] = useState(10000);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    // Validation
     if (password !== confirmPassword) {
-      alert('Passwords do not match');
+      setError('Passwords do not match');
       return;
     }
     if (password.length < 6) {
-      alert('Password must be at least 6 characters');
+      setError('Password must be at least 6 characters');
       return;
     }
-    onSignUp(username, email, password, creditTier, budget, preferredCarType, fuelType, maxDownPayment);
+
+    setIsLoading(true);
+
+    try {
+      await register(email, password, firstName, lastName, phoneNumber);
+
+      // Save user preferences to localStorage for now
+      // TODO: Move to backend user preferences API
+      localStorage.setItem('userPreferences', JSON.stringify({
+        creditTier,
+        budget,
+        preferredCarType,
+        fuelType,
+        maxDownPayment,
+      }));
+
+      onSignUp(email);
+    } catch (err) {
+      setError(getErrorMessage(err));
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -52,23 +76,45 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-6">
+            {error && (
+              <div className="bg-red-50 border border-red-200 text-red-800 rounded-md p-3 text-sm">
+                {error}
+              </div>
+            )}
+
             {/* Account Information */}
             <div className="space-y-4">
               <h3 className="text-gray-900">Account Information</h3>
-              
+
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="username">Username</Label>
+                  <Label htmlFor="firstName">First Name</Label>
                   <Input
-                    id="username"
+                    id="firstName"
                     type="text"
-                    placeholder="johndoe"
-                    value={username}
-                    onChange={(e) => setUsername(e.target.value)}
+                    placeholder="John"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={isLoading}
                     required
                   />
                 </div>
 
+                <div className="space-y-2">
+                  <Label htmlFor="lastName">Last Name</Label>
+                  <Input
+                    id="lastName"
+                    type="text"
+                    placeholder="Doe"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={isLoading}
+                    required
+                  />
+                </div>
+              </div>
+
+              <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">Email</Label>
                   <Input
@@ -77,7 +123,20 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                     placeholder="your.email@example.com"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
+                    disabled={isLoading}
                     required
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Input
+                    id="phoneNumber"
+                    type="tel"
+                    placeholder="(555) 123-4567"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    disabled={isLoading}
                   />
                 </div>
               </div>
@@ -91,6 +150,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                     placeholder="••••••••"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -103,6 +163,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                     placeholder="••••••••"
                     value={confirmPassword}
                     onChange={(e) => setConfirmPassword(e.target.value)}
+                    disabled={isLoading}
                     required
                   />
                 </div>
@@ -201,8 +262,9 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
             <Button
               type="submit"
               className="w-full bg-[#eb0a1e] hover:bg-[#c4091a]"
+              disabled={isLoading}
             >
-              Create Account
+              {isLoading ? 'Creating Account...' : 'Create Account'}
             </Button>
 
             <div className="text-center">
