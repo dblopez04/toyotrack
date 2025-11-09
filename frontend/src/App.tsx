@@ -9,8 +9,6 @@ import { ChatFinance } from './components/ChatFinance';
 import { Profile } from './components/Profile';
 import { About } from './components/About';
 import { Contact } from './components/Contact';
-import { Privacy } from './components/Privacy';
-import { Terms } from './components/Terms';
 import { CarDetails } from './components/CarDetails';
 import { Compare } from './components/Compare';
 import { cars } from './data/cars';
@@ -24,8 +22,6 @@ type Page =
   | 'profile'
   | 'about'
   | 'contact'
-  | 'privacy'
-  | 'terms'
   | 'car-details'
   | 'compare';
 
@@ -278,10 +274,6 @@ export default function App() {
         return <About />;
       case 'contact':
         return <Contact />;
-      case 'privacy':
-        return <Privacy />;
-      case 'terms':
-        return <Terms />;
       default:
         return <LandingPage onNavigate={handleNavigate} />;
     }

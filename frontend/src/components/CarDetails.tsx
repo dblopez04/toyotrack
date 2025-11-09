@@ -343,14 +343,6 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
                 </p>
               </div>
             </div>
-
-            {/* Call to Action */}
-            <Button className="w-full mt-6 bg-[#eb0a1e] hover:bg-[#c00818]">
-              Apply for {isFinance ? 'Financing' : 'Lease'}
-            </Button>
-            <p className="text-xs text-gray-500 text-center mt-3">
-              Subject to credit approval. Terms and conditions apply.
-            </p>
           </Card>
         </div>
       </div>
