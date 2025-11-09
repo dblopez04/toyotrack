@@ -5,6 +5,11 @@ const ExteriorColor = require("./exteriorColor.model")(sequelize, Sequelize.Data
 const InteriorColor = require("./interiorColor.model")(sequelize, Sequelize.DataTypes);
 const ExtraFeature = require("./extraFeature.model")(sequelize, Sequelize.DataTypes);
 const CarImage = require("./carImage.model")(sequelize, Sequelize.DataTypes);
+const User = require("./user.model")(sequelize, Sequelize.DataTypes);
+const UserPreferences = require("./userPreferences.model")(sequelize, Sequelize.DataTypes);
+const UserFinance = require("./userFinance.model")(sequelize, Sequelize.DataTypes);
+const UserBookmark = require("./userBookmark.model")(sequelize, Sequelize.DataTypes);
+const VehicleQuote = require("./vehicleQuote.model")(sequelize, Sequelize.DataTypes);
 
 const db = {
   Vehicle,
@@ -12,6 +17,11 @@ const db = {
   InteriorColor,
   ExtraFeature,
   CarImage,
+  User,
+  UserPreferences,
+  UserFinance,
+  UserBookmark,
+  VehicleQuote,
   sequelize,
   Sequelize
 };
