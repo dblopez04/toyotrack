@@ -9,8 +9,8 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
   return (
     <div className="flex-1">
       {/* Hero Section */}
-      <section className="bg-gradient-to-br from-white to-gray-100 py-20">
-        <div className="container mx-auto px-4 text-center">
+      <section className="bg-gradient-to-br from-white to-gray-400 py-20">
+        <div className="container mx-auto px-4 py-20 text-center">
           <h1 className="text-[#eb0a1e] mb-4">
             Welcome to ToyoTrack
           </h1>
@@ -36,72 +36,6 @@ export function LandingPage({ onNavigate }: LandingPageProps) {
               Log In
             </Button>
           </div>
-        </div>
-      </section>
-
-      {/* Features Section */}
-      <section className="py-16">
-        <div className="container mx-auto px-4">
-          <h2 className="text-center mb-12">Why Choose ToyoTrack?</h2>
-          <div className="grid md:grid-cols-4 gap-8">
-            <div className="text-center">
-              <div className="bg-[#f5f5f5] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Car className="h-8 w-8 text-[#eb0a1e]" />
-              </div>
-              <h3 className="mb-2">Wide Selection</h3>
-              <p className="text-gray-600">
-                Browse the complete 2025 Toyota lineup
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-[#f5f5f5] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <DollarSign className="h-8 w-8 text-[#eb0a1e]" />
-              </div>
-              <h3 className="mb-2">Best Rates</h3>
-              <p className="text-gray-600">
-                Competitive financing and lease options
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-[#f5f5f5] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Clock className="h-8 w-8 text-[#eb0a1e]" />
-              </div>
-              <h3 className="mb-2">Quick Approval</h3>
-              <p className="text-gray-600">
-                Get pre-approved in minutes online
-              </p>
-            </div>
-
-            <div className="text-center">
-              <div className="bg-[#f5f5f5] w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
-                <Shield className="h-8 w-8 text-[#eb0a1e]" />
-              </div>
-              <h3 className="mb-2">Trusted Service</h3>
-              <p className="text-gray-600">
-                Secure and reliable financing solutions
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="bg-[#eb0a1e] text-white py-16">
-        <div className="container mx-auto px-4 text-center">
-          <h2 className="mb-4">
-            Ready to Get Started?
-          </h2>
-          <p className="mb-8 max-w-2xl mx-auto">
-            Join ToyoTrack today and explore financing options tailored to your needs
-          </p>
-          <Button
-            onClick={() => onNavigate('signup')}
-            className="bg-white text-[#eb0a1e] hover:bg-gray-100"
-          >
-            Create Your Account
-          </Button>
         </div>
       </section>
     </div>
