@@ -1,6 +1,7 @@
 services:
   backend:
     build: ./backend
+    image: ghcr.io/dblopez04/toyotrack-backend:latest
     container_name: backend
     ports:
       - "4000:4000"
@@ -12,6 +13,7 @@ services:
     command: sh -c "npm run import && npm run dev"
   frontend:
     build: ./frontend
+    image: ghcr.io/dblopez04/toyotrack-frontend:latest
     container_name: frontend
     ports:
      - "3000:3000"
