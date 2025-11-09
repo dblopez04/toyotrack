@@ -21,9 +21,8 @@ export function ChatFinance() {
     },
   ]);
   const [inputValue, setInputValue] = useState('');
-  const [loading, setLoading] = useState(false);
 
-  const handleSend = async () => {
+  const handleSend = () => {
     if (!inputValue.trim()) return;
 
     const userMessage: Message = {
@@ -35,36 +34,17 @@ export function ChatFinance() {
 
     setMessages((prev) => [...prev, userMessage]);
     setInputValue('');
-    setLoading(true);
 
-    try {
-      const res = await fetch('http://localhost:4000/chat', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ message: userMessage.text }),
-      });
-      const data = await res.json();
-
+    // Simulate bot response
+    setTimeout(() => {
       const botMessage: Message = {
         id: (Date.now() + 1).toString(),
-        text: data.reply?.trim() || "Sorry, I didn't get a response.",
+        text: "Thanks for your question! I can help you with financing options, lease terms, interest rates, and payment calculations. This is a demo, so responses are simulated. In a real application, I'd provide detailed financing information.",
         sender: 'bot',
         timestamp: new Date(),
       };
-
       setMessages((prev) => [...prev, botMessage]);
-    } catch (err) {
-      console.error(err);
-      const errorMessage: Message = {
-        id: (Date.now() + 2).toString(),
-        text: 'Error: Unable to reach chatbot.',
-        sender: 'bot',
-        timestamp: new Date(),
-      };
-      setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setLoading(false);
-    }
+    }, 1000);
   };
 
   const handleKeyPress = (e: React.KeyboardEvent) => {
@@ -109,13 +89,6 @@ export function ChatFinance() {
                 </div>
               </div>
             ))}
-            {loading && (
-              <div className="flex justify-start">
-                <div className="max-w-[70%] rounded-lg px-4 py-2 bg-gray-100 text-gray-900 animate-pulse">
-                  Typing...
-                </div>
-              </div>
-            )}
           </div>
 
           <div className="border-t p-4">
@@ -124,7 +97,7 @@ export function ChatFinance() {
                 placeholder="Ask about financing options..."
                 value={inputValue}
                 onChange={(e) => setInputValue(e.target.value)}
-                onKeyDown={handleKeyPress}
+                onKeyPress={handleKeyPress}
               />
               <Button
                 onClick={handleSend}

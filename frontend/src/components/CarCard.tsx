@@ -1,4 +1,4 @@
-import { Heart } from 'lucide-react';
+import { Heart, CheckCircle2 } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Car } from '../data/cars';
@@ -8,9 +8,21 @@ interface CarCardProps {
   car: Car;
   isSaved: boolean;
   onToggleSave: (carId: string) => void;
+  onViewDetails?: (carId: string) => void;
+  compareMode?: boolean;
+  isSelectedForCompare?: boolean;
+  onToggleCompareSelection?: (carId: string) => void;
 }
 
-export function CarCard({ car, isSaved, onToggleSave }: CarCardProps) {
+export function CarCard({ 
+  car, 
+  isSaved, 
+  onToggleSave, 
+  onViewDetails,
+  compareMode = false,
+  isSelectedForCompare = false,
+  onToggleCompareSelection
+}: CarCardProps) {
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
       style: 'currency',
@@ -29,29 +41,55 @@ export function CarCard({ car, isSaved, onToggleSave }: CarCardProps) {
     return colors[fuelType as keyof typeof colors] || colors.gas;
   };
 
+  const handleCardClick = () => {
+    if (compareMode && onToggleCompareSelection) {
+      onToggleCompareSelection(car.id);
+    } else {
+      onViewDetails?.(car.id);
+    }
+  };
+
   return (
-    <Card className="overflow-hidden hover:shadow-lg transition-shadow flex-shrink-0 w-[400px]">
-      <div className="relative">
+    <Card className={`overflow-hidden hover:shadow-lg transition-all w-full ${
+      compareMode ? 'cursor-pointer' : ''
+    } ${isSelectedForCompare ? 'ring-2 ring-[#eb0a1e]' : ''}`}>
+      <div 
+        className="relative cursor-pointer"
+        onClick={handleCardClick}
+      >
         <ImageWithFallback
           src={car.image}
           alt={car.name}
           className="w-full h-48 object-cover"
         />
-        <Button
-          variant="ghost"
-          size="icon"
-          className="absolute top-2 right-2 bg-white/80 hover:bg-white"
-          onClick={() => onToggleSave(car.id)}
-        >
-          <Heart
-            className={`h-5 w-5 ${
-              isSaved ? 'fill-[#eb0a1e] text-[#eb0a1e]' : 'text-gray-600'
-            }`}
-          />
-        </Button>
+        {compareMode && isSelectedForCompare && (
+          <div className="absolute top-2 left-2 bg-[#eb0a1e] text-white rounded-full p-2">
+            <CheckCircle2 className="h-5 w-5" />
+          </div>
+        )}
+        {!compareMode && (
+          <Button
+            variant="ghost"
+            size="icon"
+            className="absolute top-2 right-2 bg-white/80 hover:bg-white"
+            onClick={(e) => {
+              e.stopPropagation();
+              onToggleSave(car.id);
+            }}
+          >
+            <Heart
+              className={`h-5 w-5 ${
+                isSaved ? 'fill-[#eb0a1e] text-[#eb0a1e]' : 'text-gray-600'
+              }`}
+            />
+          </Button>
+        )}
       </div>
 
-      <div className="p-4">
+      <div 
+        className="p-4 cursor-pointer"
+        onClick={handleCardClick}
+      >
         <div className="flex items-start justify-between mb-2">
           <div>
             <h3 className="mb-1">{car.name}</h3>
