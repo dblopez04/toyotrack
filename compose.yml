@@ -11,13 +11,13 @@ services:
         condition: service_healthy
     command: sh -c "npm run import && npm run dev"
   frontend:
-    build: ./frontend
+    build:
+      context: ./frontend
+      args:
+        VITE_API_BASE_URL: https://toyotrack.com/api
     container_name: frontend
-    ports:
-     - "3000:3000"
     volumes:
-     - ./frontend:/app
-     - /app/node_modules
+     - frontend_dist:/srv/frontend
     depends_on:
       - backend
   psql:
@@ -38,5 +38,28 @@ services:
       timeout: 5s
       retries: 5
 
+  caddy:
+    image: caddy:latest
+    container_name: caddy
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - caddy_data:/data
+      - caddy_config:/config
+      - frontend_dist:/srv/frontend
+    depends_on:
+      - backend
+      - frontend
+
+  cloudflared:
+    image: cloudflare/cloudflared:latest
+    container_name: cloudflared
+    command: tunnel --no-autoupdate run --token ${CLOUDFLARE_TUNNEL_TOKEN}
+    restart: unless-stopped
+    depends_on:
+      - caddy
+
 volumes:
   db-data:
+  caddy_data:
+  caddy_config:
+  frontend_dist:

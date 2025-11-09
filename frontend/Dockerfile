@@ -7,7 +7,8 @@ ARG VITE_API_BASE_URL
 ENV VITE_API_BASE_URL=$VITE_API_BASE_URL
 RUN npm run build
 
-FROM nginx:alpine
-COPY --from=builder /src/dist /usr/share/nginx/html
-EXPOSE 80
-CMD ["nginx", "-g", "daemon off;"]
+# Just output the built files to a volume that Caddy will serve
+FROM alpine:latest
+WORKDIR /app
+COPY --from=builder /src/build /app
+CMD ["sh", "-c", "cp -r /app/* /srv/frontend/ && tail -f /dev/null"]

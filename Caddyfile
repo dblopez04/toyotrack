@@ -1,0 +1,16 @@
+# Listen on port 80 (Cloudflare Tunnel will connect to this)
+:80 {
+    # Backend API proxy
+    handle /api/* {
+        reverse_proxy backend:4000
+    }
+
+    # Frontend - serve static files
+    handle {
+        root * /srv/frontend
+        try_files {path} /index.html
+        file_server
+    }
+
+    encode gzip
+}
