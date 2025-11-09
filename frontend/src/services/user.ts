@@ -1,20 +1,26 @@
 import apiClient from './api';
 
 interface UserPreferences {
-  preferredVehicleType?: string;
-  maxBudget?: number;
-  fuelTypePreference?: string;
+  budget?: number | null;
+  carType?: string | null;
+  fuelType?: string | null;
 }
 
 interface UserFinances {
-  annualIncome?: number;
-  creditScore?: number;
-  employmentStatus?: string;
+  creditTier?: string | null;
+}
+
+interface UserPreferencesResponse {
+  UserPreferences: UserPreferences;
+}
+
+interface UserFinancesResponse {
+  UserFinance: UserFinances;
 }
 
 class UserService {
   // Get user preferences
-  async getPreferences(): Promise<UserPreferences> {
+  async getPreferences(): Promise<UserPreferencesResponse> {
     const response = await apiClient.get('/user/preferences');
     return response.data;
   }
@@ -26,7 +32,7 @@ class UserService {
   }
 
   // Get user finances
-  async getFinances(): Promise<UserFinances> {
+  async getFinances(): Promise<UserFinancesResponse> {
     const response = await apiClient.get('/user/finances');
     return response.data;
   }

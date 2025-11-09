@@ -110,7 +110,14 @@ exports.getUserPreferences = async (req, res) => {
         });
 
         if (!userPreferences){
-            return res.status(404).send({ message: "User preferences not found" });
+            return res.send({
+                UserPreferences: {
+                    userId: req.id,
+                    budget: null,
+                    carType: null,
+                    fuelType: null
+                }
+            });
         }
 
         res.send({
@@ -153,7 +160,12 @@ exports.getUserFinances = async (req, res) => {
         });
 
         if(!userFinance){
-            return res.status(404).send({ message: "User finances not found" });
+            // Return empty object instead of 404 to avoid auth issues
+            return res.send({
+                UserFinance: {
+                    creditTier: null
+                }
+            });
         }
 
         res.send({

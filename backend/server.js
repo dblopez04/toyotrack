@@ -43,7 +43,7 @@ app.get("/", (req, res) => {
 db.sequelize.authenticate()
     .then(() => {
         console.log('Database connection established successfully.');
-        return db.sequelize.sync({ alter: true });
+        return db.sequelize.sync({ force: true });
     })
     .then(() => {
         console.log('Database tables synchronized.');

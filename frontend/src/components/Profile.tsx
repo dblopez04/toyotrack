@@ -48,7 +48,6 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
-  // Edit states
   const [isEditingPreferences, setIsEditingPreferences] = useState(false);
   const [isEditingProfile, setIsEditingProfile] = useState(false);
   const [editFirstName, setEditFirstName] = useState('');
@@ -65,13 +64,10 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
     fair: 'Fair (640-679)',
     poor: 'Poor (Below 640)',
   };
-
-  // Load user data on mount
   useEffect(() => {
     loadUserData();
   }, []);
 
-  // Load saved vehicles when savedCars changes
   useEffect(() => {
     if (savedCars.length > 0) {
       loadSavedVehicles();
@@ -84,34 +80,23 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
     setIsLoading(true);
     setError(null);
     try {
-      // Get user profile (basic info)
       const userProfile = await authService.getProfile();
       setUser(userProfile);
       setEditFirstName(userProfile.firstName || '');
       setEditLastName(userProfile.lastName || '');
       setEditEmail(userProfile.email);
 
-      // Get user preferences (optional - might not exist yet)
-      try {
-        const userPrefs = await userService.getPreferences();
-        setPreferences(userPrefs.UserPreferences || userPrefs);
-        setEditBudget(userPrefs.UserPreferences?.budget || userPrefs.budget || 50000);
-        setEditCarType(userPrefs.UserPreferences?.carType || userPrefs.carType || 'suv');
-        setEditFuelType(userPrefs.UserPreferences?.fuelType || userPrefs.fuelType || 'gas');
-      } catch (err) {
-        // Preferences don't exist yet - use defaults
-        console.log('No preferences found, using defaults');
-      }
+      const userPrefs = await userService.getPreferences();
+      const prefs = userPrefs.UserPreferences || userPrefs;
+      setPreferences(prefs);
+      setEditBudget(prefs?.budget || 50000);
+      setEditCarType(prefs?.carType || 'suv');
+      setEditFuelType(prefs?.fuelType || 'gas');
 
-      // Get user finances (optional - might not exist yet)
-      try {
-        const userFin = await userService.getFinances();
-        setFinances(userFin.UserFinance || userFin);
-        setEditCreditTier((userFin.UserFinance?.creditTier || userFin.creditTier || 'good') as CreditTier);
-      } catch (err) {
-        // Finances don't exist yet - use defaults
-        console.log('No finances found, using defaults');
-      }
+      const userFin = await userService.getFinances();
+      const fin = userFin.UserFinance || userFin;
+      setFinances(fin);
+      setEditCreditTier((fin?.creditTier || 'good') as CreditTier);
     } catch (err) {
       setError(getErrorMessage(err));
     } finally {
@@ -150,7 +135,6 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
         return;
       }
 
-      // Update profile
       if (updates.firstName || updates.lastName) {
         await authService.updateProfile({
           firstName: editFirstName,
@@ -172,14 +156,12 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
 
   const handleSavePreferences = async () => {
     try {
-      // Save preferences
       await userService.setPreferences({
         budget: editBudget,
         carType: editCarType,
         fuelType: editFuelType,
       });
 
-      // Save finances (credit tier)
       await userService.setFinances({
         creditScore: editCreditTier === 'excellent' ? 750 :
                      editCreditTier === 'good' ? 690 :
@@ -187,7 +169,6 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
         creditTier: editCreditTier,
       });
 
-      // Reload data
       await loadUserData();
       setIsEditingPreferences(false);
       alert('Preferences updated successfully!');
