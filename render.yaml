@@ -1,10 +1,10 @@
-services:
-  # PostgreSQL Database
-  - type: pgsql
-    name: toyotrack-db
-    plan: free
+databases:
+  - name: toyotrack-db
     databaseName: toyotrack
     user: toyotrack
+    plan: free
+
+services:
 
   # Backend API
   - type: web
