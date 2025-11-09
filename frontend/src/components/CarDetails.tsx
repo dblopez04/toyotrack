@@ -188,7 +188,7 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
                 <p className="text-[#eb0a1e] text-2xl">{formatPrice(car.price)}</p>
               </div>
 
-              <div className="flex flex-wrap gap-2 mb-6">
+              <div className="flex flex-wrap gap-2">
                 <span className={`px-3 py-1 rounded ${getFuelTypeBadge(car.fuelType)}`}>
                   {car.fuelType.charAt(0).toUpperCase() + car.fuelType.slice(1)}
                 </span>
@@ -202,47 +202,38 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
                 )}
               </div>
 
-              <div className="space-y-4">
-                <h3 className="text-gray-900">Specifications</h3>
-                <div className="grid grid-cols-2 gap-4">
-                  {car.specs.mpg && (
-                    <div>
-                      <p className="text-sm text-gray-600">Fuel Economy</p>
-                      <p className="text-gray-900">{car.specs.mpg}</p>
-                    </div>
-                  )}
-                  {car.specs.engine && (
-                    <div>
-                      <p className="text-sm text-gray-600">Engine</p>
-                      <p className="text-gray-900">{car.specs.engine}</p>
-                    </div>
-                  )}
-                  {car.specs.horsepower && (
-                    <div>
-                      <p className="text-sm text-gray-600">Horsepower</p>
-                      <p className="text-gray-900">{car.specs.horsepower}</p>
-                    </div>
-                  )}
-                  {car.specs.seating && (
-                    <div>
-                      <p className="text-sm text-gray-600">Seating</p>
-                      <p className="text-gray-900">{car.specs.seating}</p>
-                    </div>
-                  )}
+              {/* Only show specifications if there's actual data */}
+              {(car.specs.mpg || car.specs.engine || car.specs.horsepower || car.specs.seating) && (
+                <div className="mt-6 pt-6 border-t space-y-4">
+                  <h3 className="text-gray-900">Specifications</h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    {car.specs.mpg && (
+                      <div>
+                        <p className="text-sm text-gray-600">Fuel Economy</p>
+                        <p className="text-gray-900">{car.specs.mpg}</p>
+                      </div>
+                    )}
+                    {car.specs.engine && (
+                      <div>
+                        <p className="text-sm text-gray-600">Engine</p>
+                        <p className="text-gray-900">{car.specs.engine}</p>
+                      </div>
+                    )}
+                    {car.specs.horsepower && (
+                      <div>
+                        <p className="text-sm text-gray-600">Horsepower</p>
+                        <p className="text-gray-900">{car.specs.horsepower}</p>
+                      </div>
+                    )}
+                    {car.specs.seating && (
+                      <div>
+                        <p className="text-sm text-gray-600">Seating</p>
+                        <p className="text-gray-900">{car.specs.seating}</p>
+                      </div>
+                    )}
+                  </div>
                 </div>
-              </div>
-
-              <div className="mt-6 pt-6 border-t">
-                <h3 className="text-gray-900 mb-2">Finance Options</h3>
-                <div className="flex gap-4 text-sm text-gray-600">
-                  {car.financeOptions.includes('lease') && (
-                    <span>✓ Lease Available</span>
-                  )}
-                  {car.financeOptions.includes('finance') && (
-                    <span>✓ Finance Available</span>
-                  )}
-                </div>
-              </div>
+              )}
             </div>
           </Card>
         </div>

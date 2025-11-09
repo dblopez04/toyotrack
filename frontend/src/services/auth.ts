@@ -74,6 +74,18 @@ class AuthService {
     const response = await apiClient.put('/user/email', { email });
     return response.data;
   }
+
+  // Update user profile (name, phone)
+  async updateProfile(data: { firstName?: string; lastName?: string; phoneNumber?: string }): Promise<{ message: string; user: User }> {
+    const response = await apiClient.put('/user/profile', data);
+
+    // Update stored user data
+    if (response.data.user) {
+      localStorage.setItem('user', JSON.stringify(response.data.user));
+    }
+
+    return response.data;
+  }
 }
 
 export default new AuthService();

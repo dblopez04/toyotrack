@@ -37,6 +37,12 @@ class UserService {
     return response.data;
   }
 
+  // Get all bookmarks
+  async getBookmarks(): Promise<{ vehicleIds: number[] }> {
+    const response = await apiClient.get('/user/bookmarks');
+    return response.data;
+  }
+
   // Add bookmark (saved car)
   async addBookmark(vehicleId: number): Promise<{ message: string }> {
     const response = await apiClient.post(`/user/bookmarks/${vehicleId}`);

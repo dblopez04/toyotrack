@@ -108,7 +108,7 @@ export function FinanceCar({ savedCars, onToggleSave, onViewDetails, onCompare, 
       // Finance options
       if (filters.financeOptions.length > 0) {
         const hasOption = filters.financeOptions.some((option) =>
-          car.financeOptions.includes(option)
+          car.financeOptions.some(fo => fo.toLowerCase().includes(option.toLowerCase()))
         );
         if (!hasOption) return false;
       }

@@ -8,6 +8,14 @@ interface VehicleListResponse {
   totalPages: number;
 }
 
+export interface ExtraFeature {
+  id: number;
+  category: string;
+  featureName: string;
+  featureDescription: string;
+  optional: boolean;
+}
+
 class VehicleService {
   // Get all vehicles
   async getVehicles(): Promise<Vehicle[]> {
@@ -18,6 +26,12 @@ class VehicleService {
   // Get vehicle by ID
   async getVehicleById(id: number): Promise<Vehicle> {
     const response = await apiClient.get<Vehicle>(`/vehicle/${id}`);
+    return response.data;
+  }
+
+  // Get vehicle features
+  async getVehicleFeatures(vehicleId: number): Promise<ExtraFeature[]> {
+    const response = await apiClient.get<ExtraFeature[]>(`/vehicle/${vehicleId}/features`);
     return response.data;
   }
 

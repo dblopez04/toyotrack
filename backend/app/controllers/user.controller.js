@@ -16,10 +16,11 @@ exports.getProfile = async (req, res) => {
         }
 
         res.send({
-            user: {
-                email: user.email,
-                refreshToken: user.refreshToken
-            }
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber
         });
     } catch (err) {
         res.status(500).send({ message: err.message });
@@ -45,6 +46,37 @@ exports.setEmail = async (req, res) => {
         await user.update({ email });
 
         res.send({ message: "Email updated successfully", email });
+    } catch (err) {
+        res.status(500).send({ message: err.message });
+    }
+};
+
+exports.updateProfile = async (req, res) => {
+    try {
+        const user = await User.findOne({
+            where: { id: req.id }
+        });
+
+        if (!user) {
+            return res.status(404).send({ message: "User not found" });
+        }
+
+        const { firstName, lastName, phoneNumber } = req.body;
+        const updates = {};
+
+        if (firstName !== undefined) updates.firstName = firstName;
+        if (lastName !== undefined) updates.lastName = lastName;
+        if (phoneNumber !== undefined) updates.phoneNumber = phoneNumber;
+
+        await user.update(updates);
+
+        res.send({ message: "Profile updated successfully", user: {
+            id: user.id,
+            email: user.email,
+            firstName: user.firstName,
+            lastName: user.lastName,
+            phoneNumber: user.phoneNumber
+        }});
     } catch (err) {
         res.status(500).send({ message: err.message });
     }
@@ -184,6 +216,24 @@ exports.removeBookmark = async (req, res) => {
         }
 
         res.send({ message: "Bookmark removed successfully" });
+    } catch (err) {
+        res.status(500).send({ message: err.message });
+    }
+};
+
+exports.getBookmarks = async (req, res) => {
+    try {
+        const userId = req.id;
+
+        const bookmarks = await UserBookmark.findAll({
+            where: { userId },
+            attributes: ['vehicleId'],
+            raw: true
+        });
+
+        const vehicleIds = bookmarks.map(b => b.vehicleId);
+
+        res.send({ vehicleIds });
     } catch (err) {
         res.status(500).send({ message: err.message });
     }

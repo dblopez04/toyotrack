@@ -11,6 +11,7 @@ import { CarDetails } from './components/CarDetails';
 import { Compare } from './components/Compare';
 import { cars } from './data/cars';
 import authService from './services/auth';
+import userService from './services/user';
 import { User } from './types/api';
 
 type Page =
@@ -33,19 +34,30 @@ export default function App() {
   const [compareCarIds, setCompareCarIds] = useState<[string, string] | null>(null);
   const [availableCars, setAvailableCars] = useState<typeof cars>(cars);
 
-  // Check authentication on mount
+  // Check authentication on mount and load bookmarks
   useEffect(() => {
-    const user = authService.getCurrentUser();
-    if (user) {
-      setCurrentUser(user);
-      setCurrentPage('finance');
-    }
+    const loadUserData = async () => {
+      const user = authService.getCurrentUser();
+      if (user) {
+        setCurrentUser(user);
+        setCurrentPage('finance');
 
-    // Load saved cars from localStorage
-    const storedSavedCars = localStorage.getItem('toyotrack_saved_cars');
-    if (storedSavedCars) {
-      setSavedCars(JSON.parse(storedSavedCars));
-    }
+        // Load bookmarks from backend
+        try {
+          const { vehicleIds } = await userService.getBookmarks();
+          setSavedCars(vehicleIds.map(id => id.toString()));
+        } catch (err) {
+          console.error('Failed to load bookmarks from backend:', err);
+          // Fall back to localStorage if backend fails
+          const storedSavedCars = localStorage.getItem('toyotrack_saved_cars');
+          if (storedSavedCars) {
+            setSavedCars(JSON.parse(storedSavedCars));
+          }
+        }
+      }
+    };
+
+    loadUserData();
   }, []);
 
   // Save saved cars to localStorage
@@ -54,20 +66,42 @@ export default function App() {
   }, [savedCars]);
 
   // Handle signup - auth is handled in the SignUp component via useAuth hook
-  const handleSignUp = (email: string) => {
+  const handleSignUp = async (email: string) => {
     const user = authService.getCurrentUser();
     if (user) {
       setCurrentUser(user);
       setCurrentPage('finance');
+
+      // Small delay to ensure token is set
+      setTimeout(async () => {
+        try {
+          const { vehicleIds } = await userService.getBookmarks();
+          console.log('Loaded bookmarks on signup:', vehicleIds);
+          setSavedCars(vehicleIds.map(id => id.toString()));
+        } catch (err) {
+          console.error('Failed to load bookmarks on signup:', err);
+        }
+      }, 100);
     }
   };
 
   // Handle login - auth is handled in the Login component via useAuth hook
-  const handleLogin = (email: string) => {
+  const handleLogin = async (email: string) => {
     const user = authService.getCurrentUser();
     if (user) {
       setCurrentUser(user);
       setCurrentPage('finance');
+
+      // Small delay to ensure token is set
+      setTimeout(async () => {
+        try {
+          const { vehicleIds } = await userService.getBookmarks();
+          console.log('Loaded bookmarks on login:', vehicleIds);
+          setSavedCars(vehicleIds.map(id => id.toString()));
+        } catch (err) {
+          console.error('Failed to load bookmarks on login:', err);
+        }
+      }, 100);
     }
   };
 
@@ -75,6 +109,7 @@ export default function App() {
     authService.logout();
     setCurrentUser(null);
     setSavedCars([]);
+    localStorage.removeItem('toyotrack_saved_cars');
     setCurrentPage('landing');
   };
 
@@ -86,10 +121,33 @@ export default function App() {
     }
   };
 
-  const handleToggleSave = (carId: string) => {
+  const handleToggleSave = async (carId: string) => {
+    const isCurrentlySaved = savedCars.includes(carId);
+
+    // Optimistically update UI
     setSavedCars((prev) =>
-      prev.includes(carId) ? prev.filter((id) => id !== carId) : [...prev, carId]
+      isCurrentlySaved ? prev.filter((id) => id !== carId) : [...prev, carId]
     );
+
+    // Sync with backend
+    try {
+      const vehicleId = parseInt(carId);
+      if (isCurrentlySaved) {
+        console.log('Removing bookmark:', vehicleId);
+        await userService.removeBookmark(vehicleId);
+        console.log('Bookmark removed successfully');
+      } else {
+        console.log('Adding bookmark:', vehicleId);
+        await userService.addBookmark(vehicleId);
+        console.log('Bookmark added successfully');
+      }
+    } catch (err) {
+      console.error('Failed to sync bookmark with backend:', err);
+      // Revert on error
+      setSavedCars((prev) =>
+        isCurrentlySaved ? [...prev, carId] : prev.filter((id) => id !== carId)
+      );
+    }
   };
 
   const handleViewCarDetails = (carId: string) => {

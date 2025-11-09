@@ -200,9 +200,6 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                       <SelectItem value="sedan">Sedan</SelectItem>
                       <SelectItem value="suv">SUV</SelectItem>
                       <SelectItem value="truck">Truck</SelectItem>
-                      <SelectItem value="coupe">Coupe</SelectItem>
-                      <SelectItem value="hatchback">Hatchback</SelectItem>
-                      <SelectItem value="minivan">Minivan</SelectItem>
                     </SelectContent>
                   </Select>
                 </div>

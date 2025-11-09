@@ -58,33 +58,24 @@ export function Header({ currentUser, onNavigate, onLogout }: HeaderProps) {
         {/* Right side - User controls */}
         <div className="flex items-center gap-2 w-24 justify-end">
           {currentUser ? (
-            <>
-              <Button
-                variant="ghost"
-                size="icon"
-                onClick={() => onNavigate('profile')}
-              >
-                <Settings className="h-5 w-5" />
-              </Button>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" size="icon">
-                    <User className="h-5 w-5" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-48">
-                  <DropdownMenuItem disabled>
-                    {currentUser.username}
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => onNavigate('profile')}>
-                    Profile
-                  </DropdownMenuItem>
-                  <DropdownMenuItem onClick={onLogout}>
-                    Logout
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            </>
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" size="icon">
+                  <User className="h-5 w-5" />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" className="w-48">
+                <DropdownMenuItem disabled>
+                  {currentUser.username}
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={() => onNavigate('profile')}>
+                  Profile
+                </DropdownMenuItem>
+                <DropdownMenuItem onClick={onLogout}>
+                  Logout
+                </DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           ) : null}
         </div>
       </div>

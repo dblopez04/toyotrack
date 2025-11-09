@@ -1,8 +1,10 @@
+import { useState, useEffect } from 'react';
 import { ArrowLeft, Heart } from 'lucide-react';
 import { Button } from './ui/button';
 import { Card } from './ui/card';
 import { Car } from '../data/cars';
 import { ImageWithFallback } from './figma/ImageWithFallback';
+import vehicleService, { ExtraFeature } from '../services/vehicle';
 
 interface CompareProps {
   cars: [Car, Car];
@@ -14,6 +16,32 @@ interface CompareProps {
 
 export function Compare({ cars, savedCars, onToggleSave, onBack, onViewDetails }: CompareProps) {
   const [car1, car2] = cars;
+  const [car1Features, setCar1Features] = useState<ExtraFeature[]>([]);
+  const [car2Features, setCar2Features] = useState<ExtraFeature[]>([]);
+  const [loadingFeatures, setLoadingFeatures] = useState(false);
+
+  // Fetch features when vehicles have the same category
+  useEffect(() => {
+    const fetchFeatures = async () => {
+      if (car1.category === car2.category) {
+        setLoadingFeatures(true);
+        try {
+          const [features1, features2] = await Promise.all([
+            vehicleService.getVehicleFeatures(parseInt(car1.id)),
+            vehicleService.getVehicleFeatures(parseInt(car2.id))
+          ]);
+          setCar1Features(features1);
+          setCar2Features(features2);
+        } catch (err) {
+          console.error('Failed to load vehicle features:', err);
+        } finally {
+          setLoadingFeatures(false);
+        }
+      }
+    };
+
+    fetchFeatures();
+  }, [car1.id, car2.id, car1.category, car2.category]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat('en-US', {
@@ -139,82 +167,87 @@ export function Compare({ cars, savedCars, onToggleSave, onBack, onViewDetails }
           {/* Price & Basic Info */}
           <div className="mt-4">
             <h3 className="text-gray-900 mb-3">Pricing</h3>
-            <ComparisonRow 
-              label="MSRP" 
-              value1={formatPrice(car1.price)} 
-              value2={formatPrice(car2.price)} 
+            <ComparisonRow
+              label="MSRP"
+              value1={formatPrice(car1.price)}
+              value2={formatPrice(car2.price)}
             />
-            <ComparisonRow 
-              label="Price Difference" 
-              value1={car1.price < car2.price ? '✓ Lower' : car1.price > car2.price ? 'Higher' : 'Same'} 
-              value2={car2.price < car1.price ? '✓ Lower' : car2.price > car1.price ? 'Higher' : 'Same'} 
+            <ComparisonRow
+              label="Price Difference"
+              value1={car1.price < car2.price ? '✓ Lower' : car1.price > car2.price ? 'Higher' : 'Same'}
+              value2={car2.price < car1.price ? '✓ Lower' : car2.price > car1.price ? 'Higher' : 'Same'}
             />
           </div>
 
           {/* Vehicle Type & Fuel */}
           <div className="mt-6">
             <h3 className="text-gray-900 mb-3">Vehicle Information</h3>
-            <ComparisonRow 
-              label="Type" 
-              value1={car1.type} 
-              value2={car2.type} 
+            <ComparisonRow
+              label="Trim"
+              value1={car1.type}
+              value2={car2.type}
             />
-            <ComparisonRow 
-              label="Fuel Type" 
-              value1={car1.fuelType.charAt(0).toUpperCase() + car1.fuelType.slice(1)} 
-              value2={car2.fuelType.charAt(0).toUpperCase() + car2.fuelType.slice(1)} 
+            <ComparisonRow
+              label="Category"
+              value1={car1.category.charAt(0).toUpperCase() + car1.category.slice(1)}
+              value2={car2.category.charAt(0).toUpperCase() + car2.category.slice(1)}
             />
-            <ComparisonRow 
-              label="Category" 
-              value1={car1.category} 
-              value2={car2.category} 
-            />
-            <ComparisonRow 
-              label="TRD Series" 
-              value1={car1.isTRD ? 'Yes' : 'No'} 
-              value2={car2.isTRD ? 'Yes' : 'No'} 
+            <ComparisonRow
+              label="Fuel Type"
+              value1={car1.fuelType.charAt(0).toUpperCase() + car1.fuelType.slice(1)}
+              value2={car2.fuelType.charAt(0).toUpperCase() + car2.fuelType.slice(1)}
             />
           </div>
 
-          {/* Specifications */}
-          <div className="mt-6">
-            <h3 className="text-gray-900 mb-3">Performance & Specifications</h3>
-            <ComparisonRow 
-              label="Engine" 
-              value1={car1.specs.engine || 'N/A'} 
-              value2={car2.specs.engine || 'N/A'} 
-            />
-            <ComparisonRow 
-              label="Horsepower" 
-              value1={car1.specs.horsepower || 'N/A'} 
-              value2={car2.specs.horsepower || 'N/A'} 
-            />
-            <ComparisonRow 
-              label="Fuel Economy" 
-              value1={car1.specs.mpg || 'N/A'} 
-              value2={car2.specs.mpg || 'N/A'} 
-            />
-            <ComparisonRow 
-              label="Seating Capacity" 
-              value1={car1.specs.seating || 'N/A'} 
-              value2={car2.specs.seating || 'N/A'} 
-            />
-          </div>
+          {/* Features Comparison (when same category) - Grouped by Category */}
+          {car1.category === car2.category && (car1Features.length > 0 || car2Features.length > 0) && !loadingFeatures && (() => {
+            // Group features by category
+            const categoriesMap = new Map<string, Set<string>>();
 
-          {/* Finance Options */}
-          <div className="mt-6">
-            <h3 className="text-gray-900 mb-3">Finance Options</h3>
-            <ComparisonRow 
-              label="Financing Available" 
-              value1={car1.financeOptions.includes('finance') ? 'Yes' : 'No'} 
-              value2={car2.financeOptions.includes('finance') ? 'Yes' : 'No'} 
-            />
-            <ComparisonRow 
-              label="Leasing Available" 
-              value1={car1.financeOptions.includes('lease') ? 'Yes' : 'No'} 
-              value2={car2.financeOptions.includes('lease') ? 'Yes' : 'No'} 
-            />
-          </div>
+            car1Features.forEach((f: ExtraFeature) => {
+              if (!categoriesMap.has(f.category)) {
+                categoriesMap.set(f.category, new Set());
+              }
+              categoriesMap.get(f.category)!.add(f.featureName);
+            });
+
+            car2Features.forEach((f: ExtraFeature) => {
+              if (!categoriesMap.has(f.category)) {
+                categoriesMap.set(f.category, new Set());
+              }
+              categoriesMap.get(f.category)!.add(f.featureName);
+            });
+
+            return Array.from(categoriesMap.entries()).sort(([catA], [catB]) => catA.localeCompare(catB)).map(([category, featureNames]) => (
+              <div key={category} className="mt-6">
+                <h3 className="text-gray-900 mb-3">{category}</h3>
+                {Array.from(featureNames).sort().map((featureName: string) => {
+                  const car1HasFeature = car1Features.some((f: ExtraFeature) => f.featureName === featureName);
+                  const car2HasFeature = car2Features.some((f: ExtraFeature) => f.featureName === featureName);
+
+                  return (
+                    <div key={`${category}-${featureName}`}>
+                      <ComparisonRow
+                        label={featureName}
+                        value1={car1HasFeature ? '✓ Yes' : 'No'}
+                        value2={car2HasFeature ? '✓ Yes' : 'No'}
+                      />
+                    </div>
+                  );
+                })}
+              </div>
+            ));
+          })()}
+
+          {/* Loading Features */}
+          {car1.category === car2.category && loadingFeatures && (
+            <div className="mt-6">
+              <h3 className="text-gray-900 mb-3">
+                Features Comparison
+                <span className="text-sm text-gray-500 ml-2">(Loading...)</span>
+              </h3>
+            </div>
+          )}
 
           {/* Action Buttons */}
           <div className="mt-8 grid md:grid-cols-2 gap-4 pt-6 border-t">

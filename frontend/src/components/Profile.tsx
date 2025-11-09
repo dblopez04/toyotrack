@@ -50,7 +50,9 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
 
   // Edit states
   const [isEditingPreferences, setIsEditingPreferences] = useState(false);
-  const [isEditingEmail, setIsEditingEmail] = useState(false);
+  const [isEditingProfile, setIsEditingProfile] = useState(false);
+  const [editFirstName, setEditFirstName] = useState('');
+  const [editLastName, setEditLastName] = useState('');
   const [editEmail, setEditEmail] = useState('');
   const [editBudget, setEditBudget] = useState(50000);
   const [editCarType, setEditCarType] = useState('suv');
@@ -85,6 +87,8 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
       // Get user profile (basic info)
       const userProfile = await authService.getProfile();
       setUser(userProfile);
+      setEditFirstName(userProfile.firstName || '');
+      setEditLastName(userProfile.lastName || '');
       setEditEmail(userProfile.email);
 
       // Get user preferences (optional - might not exist yet)
@@ -127,19 +131,42 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
     }
   };
 
-  const handleUpdateEmail = async () => {
-    if (!editEmail || editEmail === user?.email) {
-      setIsEditingEmail(false);
-      return;
-    }
-
+  const handleUpdateProfile = async () => {
     try {
-      await authService.updateEmail(editEmail);
-      setUser({ ...user, email: editEmail });
-      setIsEditingEmail(false);
-      alert('Email updated successfully!');
+      const updates: any = {};
+
+      if (editFirstName !== user?.firstName) {
+        updates.firstName = editFirstName;
+      }
+      if (editLastName !== user?.lastName) {
+        updates.lastName = editLastName;
+      }
+      if (editEmail !== user?.email) {
+        updates.email = editEmail;
+      }
+
+      if (Object.keys(updates).length === 0) {
+        setIsEditingProfile(false);
+        return;
+      }
+
+      // Update profile
+      if (updates.firstName || updates.lastName) {
+        await authService.updateProfile({
+          firstName: editFirstName,
+          lastName: editLastName,
+        });
+      }
+
+      if (updates.email) {
+        await authService.updateEmail(editEmail);
+      }
+
+      setUser({ ...user, ...updates });
+      setIsEditingProfile(false);
+      alert('Profile updated successfully!');
     } catch (err) {
-      alert(`Failed to update email: ${getErrorMessage(err)}`);
+      alert(`Failed to update profile: ${getErrorMessage(err)}`);
     }
   };
 
@@ -214,35 +241,80 @@ export function Profile({ savedCars, onToggleSave, onViewDetails }: ProfileProps
           {/* Account Information */}
           <Card>
             <CardHeader>
-              <CardTitle>Account Information</CardTitle>
+              <div className="flex justify-between items-start">
+                <CardTitle>Account Information</CardTitle>
+                {!isEditingProfile ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setIsEditingProfile(true)}
+                  >
+                    Edit
+                  </Button>
+                ) : null}
+              </div>
             </CardHeader>
             <CardContent className="space-y-4">
-              <div>
-                <Label>Name</Label>
-                <p className="mt-1 text-gray-600">{user?.firstName} {user?.lastName}</p>
-              </div>
-              <div>
-                <Label>Email</Label>
-                {isEditingEmail ? (
-                  <div className="flex gap-2 mt-1">
+              {!isEditingProfile ? (
+                <>
+                  <div>
+                    <Label>Name</Label>
+                    <p className="mt-1 text-gray-600">{user?.firstName} {user?.lastName}</p>
+                  </div>
+                  <div>
+                    <Label>Email</Label>
+                    <p className="mt-1 text-gray-600">{user?.email}</p>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div className="grid md:grid-cols-2 gap-4">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        type="text"
+                        value={editFirstName}
+                        onChange={(e) => setEditFirstName(e.target.value)}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        type="text"
+                        value={editLastName}
+                        onChange={(e) => setEditLastName(e.target.value)}
+                      />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="email">Email</Label>
                     <Input
+                      id="email"
                       type="email"
                       value={editEmail}
                       onChange={(e) => setEditEmail(e.target.value)}
                     />
-                    <Button onClick={handleUpdateEmail} size="sm">Save</Button>
-                    <Button onClick={() => {
-                      setEditEmail(user?.email);
-                      setIsEditingEmail(false);
-                    }} variant="outline" size="sm">Cancel</Button>
                   </div>
-                ) : (
-                  <div className="flex gap-2 items-center mt-1">
-                    <p className="text-gray-600">{user?.email}</p>
-                    <Button onClick={() => setIsEditingEmail(true)} variant="outline" size="sm">Edit</Button>
+                  <div className="flex gap-2">
+                    <Button onClick={handleUpdateProfile} className="bg-[#eb0a1e] hover:bg-[#c4091a]">
+                      Save Changes
+                    </Button>
+                    <Button
+                      onClick={() => {
+                        setEditFirstName(user?.firstName || '');
+                        setEditLastName(user?.lastName || '');
+                        setEditEmail(user?.email);
+                        setIsEditingProfile(false);
+                      }}
+                      variant="outline"
+                    >
+                      Cancel
+                    </Button>
                   </div>
-                )}
-              </div>
+                </>
+              )}
             </CardContent>
           </Card>
 

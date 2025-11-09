@@ -31,10 +31,17 @@ apiClient.interceptors.response.use(
   (response) => response,
   (error: AxiosError) => {
     // Handle 401 Unauthorized - token expired or invalid
+    // But don't redirect if it's a login or register request (those 401s are expected)
     if (error.response?.status === 401) {
-      localStorage.removeItem('authToken');
-      localStorage.removeItem('user');
-      window.location.href = '/login';
+      const requestUrl = error.config?.url || '';
+      const isAuthEndpoint = requestUrl.includes('/auth/login') || requestUrl.includes('/auth/register');
+
+      // Only redirect if this is NOT a login/register attempt
+      if (!isAuthEndpoint) {
+        localStorage.removeItem('authToken');
+        localStorage.removeItem('user');
+        window.location.href = '/login';
+      }
     }
 
     return Promise.reject(error);
