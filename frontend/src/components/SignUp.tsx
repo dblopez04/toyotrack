@@ -88,7 +88,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="firstName">First Name</Label>
+                  <Label htmlFor="firstName">First Name *</Label>
                   <Input
                     id="firstName"
                     type="text"
@@ -101,7 +101,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="lastName">Last Name</Label>
+                  <Label htmlFor="lastName">Last Name *</Label>
                   <Input
                     id="lastName"
                     type="text"
@@ -116,7 +116,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
+                  <Label htmlFor="email">Email *</Label>
                   <Input
                     id="email"
                     type="email"
@@ -129,7 +129,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="phoneNumber">Phone Number</Label>
+                  <Label htmlFor="phoneNumber">Phone Number (optional)</Label>
                   <Input
                     id="phoneNumber"
                     type="tel"
@@ -143,7 +143,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
 
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
-                  <Label htmlFor="password">Password</Label>
+                  <Label htmlFor="password">Password *</Label>
                   <Input
                     id="password"
                     type="password"
@@ -156,7 +156,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
                 </div>
 
                 <div className="space-y-2">
-                  <Label htmlFor="confirmPassword">Confirm Password</Label>
+                  <Label htmlFor="confirmPassword">Confirm Password *</Label>
                   <Input
                     id="confirmPassword"
                     type="password"
@@ -172,12 +172,12 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
 
             {/* Financing Preferences */}
             <div className="space-y-4 pt-4 border-t">
-              <h3 className="text-gray-900">Financing Preferences</h3>
+              <h3 className="text-gray-900">Financing Preferences (optional)</h3>
               
               <div className="grid md:grid-cols-2 gap-4">
                 <div className="space-y-2">
                   <Label htmlFor="creditTier">Credit Tier</Label>
-                  <Select value={creditTier} onValueChange={(value) => setCreditTier(value as any)}>
+                  <Select value={creditTier} onValueChange={(value: any) => setCreditTier(value as any)}>
                     <SelectTrigger id="creditTier">
                       <SelectValue />
                     </SelectTrigger>
@@ -210,7 +210,7 @@ export function SignUp({ onSignUp, onNavigate }: SignUpProps) {
 
               <div className="space-y-2">
                 <Label htmlFor="fuelType">Fuel Type Preference</Label>
-                <Select value={fuelType} onValueChange={(value) => setFuelType(value as any)}>
+                <Select value={fuelType} onValueChange={(value: any) => setFuelType(value as any)}>
                   <SelectTrigger id="fuelType">
                     <SelectValue />
                   </SelectTrigger>

@@ -49,7 +49,11 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
   const [creditTiers, setCreditTiers] = useState<CreditTierData[]>([]);
   const [isLoadingRates, setIsLoadingRates] = useState(false);
   const [ratesError, setRatesError] = useState<string | null>(null);
-
+  interface CreditTier {
+    toLowerCase(): unknown;
+    apr: number;
+    aprPercent: string;
+  }
   // Fetch credit tiers on mount
   useEffect(() => {
     const fetchCreditTiers = async () => {
@@ -250,7 +254,7 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
 
             {/* Finance Type Selection */}
             <div className="mb-6">
-              <Tabs value={financeType} onValueChange={(v) => setFinanceType(v as 'finance' | 'lease')}>
+              <Tabs value={financeType} onValueChange={(v: string) => setFinanceType(v as 'finance' | 'lease')}>
                 <TabsList className="grid w-full grid-cols-2">
                   <TabsTrigger value="finance">Finance</TabsTrigger>
                   <TabsTrigger value="lease">Lease</TabsTrigger>
@@ -263,7 +267,7 @@ export function CarDetails({ car, isSaved, onToggleSave, onBack }: CarDetailsPro
               <Label htmlFor="creditTier" className="mb-2 block">
                 Credit Score Tier
               </Label>
-              <Select value={creditTier} onValueChange={(v) => setCreditTier(v as CreditTier)}>
+              <Select value={creditTier} onValueChange={(v: string) => setCreditTier(v as unknown as CreditTier)}>
                 <SelectTrigger id="creditTier">
                   <SelectValue />
                 </SelectTrigger>
