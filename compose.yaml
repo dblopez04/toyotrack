@@ -5,17 +5,38 @@ services:
     ports:
       - "4000:4000"
     environment:
-      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@db:5432/${DB_NAME}
+      DATABASE_URL: postgres://${DB_USER}:${DB_PASSWORD}@psql:5432/${DB_NAME}
     depends_on:
-      db:
+      psql:
         condition: service_healthy
+    command: sh -c "npm run import && npm run dev"
   frontend:
     build: ./frontend
     container_name: frontend
     ports:
-     - "5173:5173"
+     - "3000:3000"
     volumes:
      - ./frontend:/app
      - /app/node_modules
     depends_on:
       - backend
+  psql:
+    image: postgres
+    platform: linux/amd64
+    container_name: psql
+    ports:
+     - "5433:5432"
+    environment:
+      - POSTGRES_USER=${DB_USER}
+      - POSTGRES_PASSWORD=${DB_PASSWORD}
+      - POSTGRES_DB=${DB_NAME}
+    volumes:
+     - db-data:/var/lib/postgresql
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USER} -d ${DB_NAME}"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  db-data:

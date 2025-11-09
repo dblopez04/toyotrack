@@ -40,7 +40,17 @@ app.get("/", (req, res) => {
     })
 });
 
-db.sequelize.authenticate();
-app.listen(4000, () => {
-    console.log(`server is running on port 4000.`);
-});
+db.sequelize.authenticate()
+    .then(() => {
+        console.log('Database connection established successfully.');
+        return db.sequelize.sync({ alter: true });
+    })
+    .then(() => {
+        console.log('Database tables synchronized.');
+        app.listen(4000, () => {
+            console.log(`server is running on port 4000.`);
+        });
+    })
+    .catch(err => {
+        console.error('Unable to connect to the database:', err);
+    });

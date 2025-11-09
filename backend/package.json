@@ -4,6 +4,7 @@
   "main": "server.js",
   "scripts": {
     "dev": "nodemon server.js",
+    "import": "node app/scripts/importVehicles.js",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage"

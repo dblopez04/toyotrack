@@ -1,7 +1,7 @@
 FROM node:24.8.0-bullseye
-WORKDIR /app
+WORKDIR /src
 COPY package*.json ./
 RUN npm install
 COPY . .
-EXPOSE 5173
+EXPOSE 3000
 CMD ["npm", "run", "dev"]
