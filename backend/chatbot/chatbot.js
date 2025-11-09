@@ -17,7 +17,9 @@ const model = genAI.getGenerativeModel({
   model: "gemini-2.5-flash",
   systemInstruction: "You are a helpful finance assistant.",
 });
-
+app.get('/',(req, res) => {
+  res.send('Chatbot API is running.');
+});
 app.post('/chat', async (req, res) => {
   const { message } = req.body;
 
@@ -31,8 +33,7 @@ app.post('/chat', async (req, res) => {
     const response = result.response;
 
     // 5. Use the correct path to parse the response text
-    const botText = response.candidates?.[0]?.content?.parts?.[0]?.text || "Sorry, I couldn't generate a response.";
-    
+    const botText = response.text || "Sorry, I couldn't generate a response.";
     res.json({ reply: botText });
   } catch (err) {
     console.error('AI Error:', err.message);
